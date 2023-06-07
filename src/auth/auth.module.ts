@@ -24,6 +24,6 @@ import { MailerService } from 'src/common/mailer.service';
   ],
   providers: [AuthService, UserRepository, MailerService],
   controllers: [AuthController],
-  exports: [TokenModule, UserRepository, MailerService],
+  exports: [TokenModule, UserRepository, AuthService],
 })
 export class AuthModule {}

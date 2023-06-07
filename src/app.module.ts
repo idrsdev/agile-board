@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmConfigService } from './config/TypeOrmConfigService';
 import { PasswordResetModule } from './password-reset/password-reset.module';
+import { WorkspaceModule } from './workspace/workspace.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PasswordResetModule } from './password-reset/password-reset.module';
     }),
     AuthModule,
     PasswordResetModule,
+    WorkspaceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -5,6 +5,7 @@ import { Request } from 'express';
 import { LoginUserDto } from './dto/loginUser.dto';
 import { TokenRepository } from 'src/auth/token/token.repository';
 import { MailerService } from 'src/common/mailer.service';
+import { User } from './user.entity';
 
 @Injectable()
 export class AuthService {
@@ -88,5 +89,10 @@ export class AuthService {
 
     // Send the activation email
     await this.mailerService.sendEmail(emailOptions);
+  }
+
+  async getUserById(id: string): Promise<User | null> {
+    const user = await this.userRepository.getUserById(id);
+    return user;
   }
 }

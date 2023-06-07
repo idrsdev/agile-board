@@ -3,11 +3,15 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
+  JoinTable,
+  ManyToMany,
+  OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Token } from './token/token.entity';
+import { Workspace } from 'src/workspace/workspace.entity';
 
 @Entity()
 export class User {
@@ -35,4 +39,11 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => Workspace, (workspace) => workspace.createdBy)
+  createdWorkspaces: Workspace[];
+
+  @ManyToMany(() => Workspace, (workspace) => workspace.members)
+  @JoinTable()
+  workspaces: Workspace[];
 }
