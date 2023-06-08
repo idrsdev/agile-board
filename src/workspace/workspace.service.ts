@@ -68,7 +68,7 @@ export class WorkspaceService {
       where: {
         id: id,
       },
-      relations: ['members', 'boards'],
+      relations: ['createdBy', 'members'], // TODO: add 'boards' when implemented
     };
     const workspace = await this.workspaceRepository.findOne(options);
 
@@ -79,13 +79,13 @@ export class WorkspaceService {
     const isAuthor = workspace.createdBy.id === userId;
     const isMember = workspace.members.some((member) => member.id === userId);
 
-    if (!isAuthor && !isMember) {
-      throw new UnauthorizedException(
-        'You are not authorized to access this workspace',
-      );
+    if (isAuthor || isMember) {
+      return workspace;
     }
 
-    return workspace;
+    throw new UnauthorizedException(
+      'You are not authorized to access this workspace',
+    );
   }
 
   async updateWorkspace(
@@ -148,9 +148,8 @@ export class WorkspaceService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
-
+    // TODO: Fix this addition of member
     workspace.members.push(member);
-
     return this.workspaceRepository.save(workspace);
   }
 

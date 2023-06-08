@@ -25,9 +25,9 @@ export class AuthService {
     );
 
     // Construct the activation email
-    const activationLink = `${req.protocol}://${req.get('host')}/auth/verify/${
-      user.email
-    }/${activationToken}`;
+    const activationLink = `${req.protocol}://${req.get(
+      'host',
+    )}/auth/verify?email=${user.email}&token=${activationToken}`;
 
     const emailOptions = {
       recipient: user.email,

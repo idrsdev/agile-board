@@ -4,6 +4,7 @@ import { CreateUserDto } from './dto/createUser.dto';
 import { LoginUserDto } from './dto/loginUser.dto';
 import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ResendActivationEmailDto } from './dto/resendActivationEmail.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -17,12 +18,7 @@ export class AuthController {
     @Body() createUserDto: CreateUserDto,
     @Req() req: Request,
   ): Promise<void> {
-    try {
-      await this.authService.create(createUserDto, req);
-    } catch (error) {
-      throw error;
-      // console.log({ error });
-    }
+    await this.authService.create(createUserDto, req);
   }
 
   @ApiOperation({ summary: 'Authenticate user' })
@@ -57,9 +53,9 @@ export class AuthController {
   })
   @Post('resend-activation-link')
   async resendActivationEmail(
-    @Body('email') email: string,
+    @Body() body: ResendActivationEmailDto,
     @Req() req: Request,
   ): Promise<void> {
-    await this.authService.resendActivationLink(email, req);
+    await this.authService.resendActivationLink(body.email, req);
   }
 }

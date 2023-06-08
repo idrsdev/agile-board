@@ -1,6 +1,7 @@
 import { User } from 'src/auth/user.entity';
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinTable,
   ManyToMany,
@@ -15,6 +16,9 @@ export class Workspace {
 
   @Column()
   name: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
 
   @ManyToOne(() => User, (user) => user.createdWorkspaces)
   createdBy: User;
