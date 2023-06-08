@@ -42,6 +42,7 @@ export class UserRepository {
     const { email, password } = loginUserDto;
     const user = await this.userRepository.findOne({
       where: { email },
+      select: ['password'],
     });
 
     if (!user || !(await this.validatePassword(password, user.password))) {
@@ -73,7 +74,7 @@ export class UserRepository {
     return user;
   }
 
-  async getUserById(id: string): Promise<User> {
+  async getUserById(id: number): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id: id },
     });
@@ -82,7 +83,6 @@ export class UserRepository {
       throw new NotFoundException('User not found');
     }
 
-    delete user.password;
     return user;
   }
 
@@ -102,7 +102,7 @@ export class UserRepository {
     return bcrypt.compare(password, hashedPassword);
   }
 
-  private async generateAccessToken(userId: string): Promise<string> {
+  private async generateAccessToken(userId: number): Promise<string> {
     return this.jwtService.sign(
       {
         _id: userId,

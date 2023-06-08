@@ -41,7 +41,7 @@ export class WorkspaceController {
     type: Workspace,
     isArray: true,
   })
-  getMyWorkspace(@GetUserId() userId: string): Promise<PaginatedWorkspaces> {
+  getMyWorkspace(@GetUserId() userId: number): Promise<PaginatedWorkspaces> {
     return this.workspaceService.getWorkspacesCreatedByUser(userId);
   }
 
@@ -66,7 +66,7 @@ export class WorkspaceController {
   })
   getWorkspaceById(
     @Param('id') id: number,
-    @GetUserId() userId: string,
+    @GetUserId() userId: number,
   ): Promise<Workspace> {
     return this.workspaceService.getWorkspaceByUserIdWhereOwnerOrMember(
       id,
@@ -82,7 +82,7 @@ export class WorkspaceController {
   })
   createWorkspace(
     @Body() createWorkspaceDto: CreateWorkspaceDto,
-    @GetUserId() userId: string,
+    @GetUserId() userId: number,
   ): Promise<Workspace> {
     return this.workspaceService.createWorkspace(createWorkspaceDto, userId);
   }
@@ -96,7 +96,7 @@ export class WorkspaceController {
   updateWorkspace(
     @Param('id') id: number,
     @Body() updateWorkspaceDto: UpdateWorkspaceDto,
-    @GetUserId() userId: string,
+    @GetUserId() userId: number,
   ): Promise<Workspace> {
     return this.workspaceService.updateWorkspace(
       id,
@@ -109,7 +109,7 @@ export class WorkspaceController {
   @ApiResponse({ status: 204, description: 'Deletes a workspace if author' })
   deleteWorkspace(
     @Param('id') id: number,
-    @GetUserId() userId: string,
+    @GetUserId() userId: number,
   ): Promise<void> {
     return this.workspaceService.deleteWorkspace(id, userId);
   }
@@ -122,8 +122,8 @@ export class WorkspaceController {
   })
   addMemberToWorkspace(
     @Param('id') workspaceId: number,
-    @Param('memberId') memberId: string,
-    @GetUserId() userId: string,
+    @Param('memberId') memberId: number,
+    @GetUserId() userId: number,
   ): Promise<Workspace> {
     return this.workspaceService.addMemberToWorkspace(
       workspaceId,
@@ -140,8 +140,8 @@ export class WorkspaceController {
   })
   removeMemberFromWorkspace(
     @Param('id') workspaceId: number,
-    @Param('memberId') memberId: string,
-    @GetUserId() userId: string,
+    @Param('memberId') memberId: number,
+    @GetUserId() userId: number,
   ): Promise<Workspace> {
     return this.workspaceService.removeMemberFromWorkspace(
       workspaceId,

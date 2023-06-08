@@ -10,7 +10,7 @@ export class TokenRepository {
     private tokenRepository: Repository<Token>,
   ) {}
 
-  async createToken(userId: string, token: string): Promise<Token> {
+  async createToken(userId: number, token: string): Promise<Token> {
     const activationToken = this.tokenRepository.create({
       userId,
       token,
@@ -19,7 +19,7 @@ export class TokenRepository {
     return this.tokenRepository.save(activationToken);
   }
 
-  async findTokenByUserId(userId: string): Promise<Token | undefined> {
+  async findTokenByUserId(userId: number): Promise<Token | undefined> {
     return this.tokenRepository.findOne({ where: { userId } });
   }
 
@@ -27,7 +27,7 @@ export class TokenRepository {
     await this.tokenRepository.remove(token);
   }
 
-  async generateActivationToken(userId: string): Promise<string> {
+  async generateActivationToken(userId: number): Promise<string> {
     const characters =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -47,7 +47,7 @@ export class TokenRepository {
   }
 
   async validateActivationToken(
-    userId: string,
+    userId: number,
     token: string,
   ): Promise<boolean> {
     const foundToken = await this.findTokenByUserId(userId);

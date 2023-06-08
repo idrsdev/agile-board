@@ -35,7 +35,7 @@ export class PasswordResetService {
   }
 
   async resetPassword(
-    userId: string,
+    userId: number,
     token: string,
     password: string,
   ): Promise<void> {

@@ -10,7 +10,7 @@ export class ReqResetPasswordDto {
 export class ResetPasswordDto {
   @ApiProperty()
   @IsNotEmpty()
-  userId: string;
+  userId: number;
 
   @ApiProperty()
   @IsNotEmpty()

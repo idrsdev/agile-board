@@ -37,7 +37,7 @@ export class WorkspaceRepository {
   }
 
   async findWorkspacesCreatedByUser(
-    userId: string,
+    userId: number,
     skip = 1,
     limit = 10,
   ): Promise<[Workspace[], number]> {

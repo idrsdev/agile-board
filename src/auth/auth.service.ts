@@ -91,7 +91,7 @@ export class AuthService {
     await this.mailerService.sendEmail(emailOptions);
   }
 
-  async getUserById(id: string): Promise<User | null> {
+  async getUserById(id: number): Promise<User | null> {
     const user = await this.userRepository.getUserById(id);
     return user;
   }

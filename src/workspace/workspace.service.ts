@@ -50,25 +50,25 @@ export class WorkspaceService {
 
   async createWorkspace(
     createWorkspaceDto: CreateWorkspaceDto,
-    createdBy: string,
+    userId: number,
   ) {
     const { name } = createWorkspaceDto;
 
     const workspace = new Workspace();
     workspace.name = name;
-    workspace.createdBy = await this.userService.getUserById(createdBy);
+    workspace.createdBy = await this.userService.getUserById(userId);
     return this.workspaceRepository.save(workspace);
   }
 
   async getWorkspaceByUserIdWhereOwnerOrMember(
     id: number,
-    userId: string,
+    userId: number,
   ): Promise<Workspace> {
     const options: FindOneOptions<Workspace> = {
       where: {
         id: id,
       },
-      relations: ['createdBy', 'members'], // TODO: add 'boards' when implemented
+      relations: ['createdBy', 'members'],
     };
     const workspace = await this.workspaceRepository.findOne(options);
 
@@ -91,9 +91,13 @@ export class WorkspaceService {
   async updateWorkspace(
     id: number,
     updateWorkspaceDto: UpdateWorkspaceDto,
-    userId: string,
+    userId: number,
   ): Promise<Workspace> {
     const workspace = await this.getWorkspaceById(id);
+
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
+    }
 
     if (workspace.createdBy.id !== userId) {
       throw new UnauthorizedException(
@@ -107,7 +111,7 @@ export class WorkspaceService {
     return this.workspaceRepository.save(workspace);
   }
 
-  async deleteWorkspace(id: number, userId: string): Promise<void> {
+  async deleteWorkspace(id: number, userId: number): Promise<void> {
     const workspace = await this.getWorkspaceById(id);
 
     if (!workspace) {
@@ -127,10 +131,11 @@ export class WorkspaceService {
     }
   }
 
+  // TODO: Check the USER being added into workspace is not it's author
   async addMemberToWorkspace(
     workspaceId: number,
-    memberId: string,
-    userId: string,
+    memberId: number,
+    userId: number,
   ): Promise<Workspace> {
     const workspace = await this.getWorkspaceById(workspaceId);
 
@@ -148,15 +153,15 @@ export class WorkspaceService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
-    // TODO: Fix this addition of member
+
     workspace.members.push(member);
     return this.workspaceRepository.save(workspace);
   }
 
   async removeMemberFromWorkspace(
     workspaceId: number,
-    memberId: string,
-    userId: string,
+    memberId: number,
+    userId: number,
   ): Promise<Workspace> {
     const workspace = await this.getWorkspaceById(workspaceId);
 
@@ -178,7 +183,7 @@ export class WorkspaceService {
   }
 
   async getWorkspacesCreatedByUser(
-    userId: string,
+    userId: number,
     page = 1,
     limit = 10,
   ): Promise<PaginatedWorkspaces> {
@@ -236,12 +241,12 @@ export class WorkspaceService {
     };
   }
 
-  private async getWorkspaceById(id: number): Promise<Workspace | null> {
+  private async getWorkspaceById(id: number): Promise<null | Workspace> {
     const options: FindOneOptions<Workspace> = {
       where: {
         id: id,
       },
-      relations: ['createdBy'],
+      relations: ['createdBy', 'members'],
     };
     const workspace = await this.workspaceRepository.findOne(options);
 

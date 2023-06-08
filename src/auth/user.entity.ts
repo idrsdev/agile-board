@@ -16,7 +16,7 @@ import { Workspace } from 'src/workspace/workspace.entity';
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
-  id: string;
+  id: number;
 
   @Column()
   name: string;
@@ -24,7 +24,9 @@ export class User {
   @Column()
   email: string;
 
-  @Column()
+  @Column({
+    select: false,
+  })
   password: string;
 
   @Column({ default: false })
@@ -44,6 +46,5 @@ export class User {
   createdWorkspaces: Workspace[];
 
   @ManyToMany(() => Workspace, (workspace) => workspace.members)
-  @JoinTable()
   workspaces: Workspace[];
 }
