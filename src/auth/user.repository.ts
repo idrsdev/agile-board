@@ -11,8 +11,8 @@ import { LoginUserDto } from './dto/loginUser.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { TokenRepository } from 'src/auth/token/token.repository';
-import { UserRole } from './roles/role.entity';
 import { RoleRepository } from './roles/role.repository';
+import { UserRole } from './roles/role.enum';
 
 @Injectable()
 export class UserRepository {

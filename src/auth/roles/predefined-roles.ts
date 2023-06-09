@@ -1,5 +1,6 @@
-import { Role, UserRole } from 'src/auth/roles/role.entity';
+import { Role } from 'src/auth/roles/role.entity';
 import { DataSource } from 'typeorm';
+import { UserRole } from './role.enum';
 
 export async function createRoles(conn: DataSource): Promise<void> {
   try {

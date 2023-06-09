@@ -18,13 +18,18 @@ import { GetUserId } from 'src/common/decorators/get-user-id.decorator';
 import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 import { AddOrRemoveMemberDto } from './dto/add-or-remove-member.dto';
 import { PaginationParamsDTO } from 'src/common/pagination-params.dto';
+import { UserRole } from 'src/auth/roles/role.enum';
+import { Roles } from 'src/auth/roles/roles.decorator';
+import { RoleGuard } from 'src/auth/roles/role.guard';
 
 @ApiTags('Workspaces')
 @UseGuards(JwtAuthGuard)
 @Controller('workspaces')
 export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
-  // @ROLE_GUARD() // To check if the user has an admin role?
+
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RoleGuard)
   @Get()
   @ApiResponse({
     status: 200,
