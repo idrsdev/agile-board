@@ -9,7 +9,7 @@ import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { AuthService } from 'src/auth/auth.service';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { DeleteResult, FindManyOptions, FindOneOptions } from 'typeorm';
-import { PaginatedResponse } from 'src/common/interfaces';
+import { PaginatedResponse } from 'src/common/paginated-response.interface';
 
 @Injectable()
 export class WorkspaceService {
@@ -132,6 +132,7 @@ export class WorkspaceService {
   }
 
   // TODO: Check the USER being added into workspace is not it's author
+  // TODO: Make sure no duplicates
   async addMemberToWorkspace(
     workspaceId: number,
     memberId: number,
@@ -153,9 +154,15 @@ export class WorkspaceService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
+    const existingMember = workspace.members.find(
+      (existingMember) => existingMember.id === member.id,
+    );
 
-    workspace.members.push(member);
-    return this.workspaceRepository.save(workspace);
+    if (!existingMember) {
+      workspace.members.push(member);
+      return this.workspaceRepository.save(workspace);
+    }
+    return workspace;
   }
 
   async removeMemberFromWorkspace(
