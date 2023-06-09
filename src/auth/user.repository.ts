@@ -11,12 +11,15 @@ import { LoginUserDto } from './dto/loginUser.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { TokenRepository } from 'src/auth/token/token.repository';
+import { UserRole } from './roles/role.entity';
+import { RoleRepository } from './roles/role.repository';
 
 @Injectable()
 export class UserRepository {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private roleRepository: RoleRepository,
     private tokenRepository: TokenRepository,
     private jwtService: JwtService,
   ) {}
@@ -31,10 +34,21 @@ export class UserRepository {
       throw new BadRequestException('Email already exists');
     }
 
+    const defaultRole = await this.roleRepository.findOne({
+      where: {
+        name: UserRole.USER,
+      },
+    });
+
+    if (!defaultRole) {
+      throw new NotFoundException('Default role not found');
+    }
+
     const user = new User();
     user.name = name;
     user.email = email;
     user.password = await this.hashPassword(password);
+    user.roles = [defaultRole];
     return this.userRepository.save(user);
   }
 
@@ -42,14 +56,20 @@ export class UserRepository {
     const { email, password } = loginUserDto;
     const user = await this.userRepository.findOne({
       where: { email },
-      select: ['password'],
+      select: ['id', 'password'],
+      relations: {
+        roles: true,
+      },
     });
 
     if (!user || !(await this.validatePassword(password, user.password))) {
       throw new BadRequestException('Invalid credential');
     }
 
-    const token = this.generateAccessToken(user.id);
+    const token = this.generateAccessToken(
+      user.id,
+      user.roles?.map((role) => role.name),
+    );
 
     return token;
   }
@@ -77,6 +97,7 @@ export class UserRepository {
   async getUserById(id: number): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id: id },
+      relations: ['roles'],
     });
 
     if (!user) {
@@ -102,10 +123,14 @@ export class UserRepository {
     return bcrypt.compare(password, hashedPassword);
   }
 
-  private async generateAccessToken(userId: number): Promise<string> {
+  private async generateAccessToken(
+    userId: number,
+    roles: UserRole[],
+  ): Promise<string> {
     return this.jwtService.sign(
       {
         _id: userId,
+        roles,
       },
       {
         secret: process.env.JWT_SECRET,

@@ -7,7 +7,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmConfigService } from './config/TypeOrmConfigService';
 import { PasswordResetModule } from './password-reset/password-reset.module';
 import { WorkspaceModule } from './workspace/workspace.module';
-
+import { DataSource } from 'typeorm';
+import { createRoles } from './auth/roles/predefined-roles';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -22,4 +23,10 @@ import { WorkspaceModule } from './workspace/workspace.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {
+  constructor(private dataSource: DataSource) {}
+  async onModuleInit() {
+    // Create static roles in our system
+    await createRoles(this.dataSource.manager.connection);
+  }
+}

@@ -8,11 +8,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TokenModule } from 'src/auth/token/token.module';
 import { MailerService } from 'src/common/mailer.service';
+import { RoleModule } from './roles/role.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     TokenModule,
+    RoleModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
