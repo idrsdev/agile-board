@@ -9,6 +9,7 @@ import { PasswordResetModule } from './password-reset/password-reset.module';
 import { WorkspaceModule } from './workspace/workspace.module';
 import { DataSource } from 'typeorm';
 import { createRoles } from './auth/roles/predefined-roles';
+import { BoardModule } from './board/board.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -19,6 +20,7 @@ import { createRoles } from './auth/roles/predefined-roles';
     AuthModule,
     PasswordResetModule,
     WorkspaceModule,
+    BoardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

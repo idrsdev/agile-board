@@ -10,6 +10,6 @@ import { Workspace } from './workspace.entity';
   imports: [TypeOrmModule.forFeature([Workspace]), AuthModule],
   controllers: [WorkspaceController],
   providers: [WorkspaceService, WorkspaceRepository],
-  exports: [],
+  exports: [WorkspaceRepository],
 })
 export class WorkspaceModule {}

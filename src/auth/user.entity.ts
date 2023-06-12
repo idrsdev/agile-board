@@ -13,6 +13,7 @@ import {
 import { Token } from './token/token.entity';
 import { Workspace } from 'src/workspace/workspace.entity';
 import { Role } from './roles/role.entity';
+import { Board } from 'src/board/board.entity';
 
 @Entity()
 export class User {
@@ -60,6 +61,9 @@ export class User {
 
   @OneToMany(() => Workspace, (workspace) => workspace.createdBy)
   createdWorkspaces: Workspace[];
+
+  @OneToMany(() => Board, (Board) => Board.createdBy)
+  boards: Board[];
 
   @ManyToMany(() => Workspace, (workspace) => workspace.members)
   workspaces: Workspace[];

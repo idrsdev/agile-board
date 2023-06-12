@@ -68,7 +68,11 @@ export class WorkspaceService {
       where: {
         id: id,
       },
-      relations: ['createdBy', 'members'],
+      relations: {
+        createdBy: true,
+        members: true,
+        boards: true,
+      },
     };
     const workspace = await this.workspaceRepository.findOne(options);
 

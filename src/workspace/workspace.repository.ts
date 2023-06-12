@@ -9,14 +9,16 @@ import {
 import { Workspace } from './workspace.entity';
 
 @Injectable()
-export class WorkspaceRepository {
+export class WorkspaceRepository extends Repository<Workspace> {
   constructor(
     @InjectRepository(Workspace)
     private workspaceRepository: Repository<Workspace>,
-  ) {}
-
-  async save(workspace: Workspace): Promise<Workspace> {
-    return this.workspaceRepository.save(workspace);
+  ) {
+    super(
+      workspaceRepository.target,
+      workspaceRepository.manager,
+      workspaceRepository.queryRunner,
+    );
   }
 
   async findOne(
@@ -36,6 +38,7 @@ export class WorkspaceRepository {
     return result;
   }
 
+  // TODO: Look members and boards associated
   async findWorkspacesCreatedByUser(
     userId: number,
     skip = 1,

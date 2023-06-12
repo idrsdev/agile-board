@@ -15,14 +15,20 @@ import { RoleRepository } from './roles/role.repository';
 import { UserRole } from './roles/role.enum';
 
 @Injectable()
-export class UserRepository {
+export class UserRepository extends Repository<User> {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private roleRepository: RoleRepository,
     private tokenRepository: TokenRepository,
     private jwtService: JwtService,
-  ) {}
+  ) {
+    super(
+      userRepository.target,
+      userRepository.manager,
+      userRepository.queryRunner,
+    );
+  }
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     const { name, email, password } = createUserDto;

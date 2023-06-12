@@ -1,4 +1,5 @@
 import { User } from 'src/auth/user.entity';
+import { Board } from 'src/board/board.entity';
 import {
   Column,
   CreateDateColumn,
@@ -6,6 +7,7 @@ import {
   JoinTable,
   ManyToMany,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -27,6 +29,6 @@ export class Workspace {
   @JoinTable()
   members: User[];
 
-  //   @OneToMany(() => Board, (user) => user.workspaces)
-  //   boards: Board[];
+  @OneToMany(() => Board, (board) => board.workspace)
+  boards: Board[];
 }
