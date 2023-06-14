@@ -120,9 +120,9 @@ export class BoardService {
   async getBoardById(boardId: number, userId: number) {
     const board = await this.boardRepository
       .createQueryBuilder('board')
-      // TODO: check this once the list module is done
-      .leftJoinAndSelect('board.lists', 'list')
-      .leftJoinAndSelect('board.cards', 'card')
+      // TODO: Add lists and cards once they are added
+      // .leftJoinAndSelect('board.lists', 'list')
+      // .leftJoinAndSelect('board.cards', 'card')
       .leftJoinAndSelect('board.members', 'member')
       .leftJoinAndSelect('board.workspace', 'workspace')
       .where('board.id = :boardId', { boardId })
@@ -279,38 +279,106 @@ export class BoardService {
     return board > 0;
   }
 
-  private async hasBoardPermission(
-    boardId: number,
-    userId: number,
-  ): Promise<boolean> {
-    const count = await this.boardRepository
-      .createQueryBuilder('board')
-      .leftJoin('board.createdBy', 'user')
-      .leftJoin('board.members', 'board_member')
-      .where('board.id = :boardId', { boardId })
-      .andWhere(
-        '(board.createdBy = : userId OR (board_member.user = :userId AND (board_member.role = "admin" OR board_member.role = "member")))',
-        { userId },
-      )
-      .getCount();
+  async hasBoardPermission(boardId: number, userId: number): Promise<boolean> {
+    try {
+      const connection = this.dataSource.manager.connection;
+      // Check if the board is created by the current user or the user is a member of the board with the role 'admin'
+      const createdByCurrentUserOrAdmin = await connection
+        .createQueryBuilder()
+        .from('board', 'board')
+        .leftJoin('board.createdBy', 'createdBy')
+        .leftJoin('board.members', 'boardMember')
+        .where(
+          '(board.id = :boardId AND createdBy.id = :userId) OR (boardMember.boardId = :boardId AND boardMember.userId = :userId AND boardMember.role = :role)',
+          {
+            boardId,
+            userId,
+            role: 'admin',
+          },
+        )
+        .getCount();
 
-    return count > 0;
+      if (createdByCurrentUserOrAdmin > 0) {
+        return true;
+      }
+
+      // Check if the workspace of the board is created by the current user or the user is a member of the workspace
+      const workspaceCreatedByCurrentUserOrMember = await connection
+        .createQueryBuilder()
+        .from('board', 'board')
+        .leftJoin('board.workspace', 'workspace')
+        .leftJoin('workspace.members', 'members')
+        .leftJoin('workspace.createdBy', 'workspaceCreatedBy')
+        .where(
+          '(board.id = :boardId AND workspaceCreatedBy.id = :userId) OR (members.id = :userId)',
+          {
+            boardId,
+            userId,
+          },
+        )
+        .getExists();
+
+      if (workspaceCreatedByCurrentUserOrMember) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
   }
 
-  //   async hasBoardPermission(boardId: number, userId: number): Promise<boolean> {
-  //     const query = `
+  // private async hasBoardPermission(
+  //   boardId: number,
+  //   userId: number,
+  // ): Promise<boolean> {
+  //   const hasPermission = await this.boardRepository
+  //     .createQueryBuilder('board')
+  //     .leftJoin('board.createdBy', 'createdBy')
+  //     .leftJoin('board.members', 'boardMembers')
+  //     .leftJoin('board.workspace', 'workspace')
+  //     .leftJoin('workspace.members', 'workspace_members')
+  //     .leftJoin('workspace.createdBy', 'workspaceCreatedBy')
+  //     .where('board.id = :boardId', { boardId })
+  //     .andWhere(
+  //       '(createdBy.id = :userId OR (boardMembers.user = :userId AND boardMembers.role = :role) OR :userId = ANY(ARRAY[workspace_members.id]) OR :userId = workspaceCreatedBy.id)',
+  //       { userId, role: 'admin' },
+  //     )
+  //     .getCount();
+
+  //   return hasPermission > 0;
+  // }
+
+  // async hasBoardPermission(boardId: number, userId: number): Promise<boolean> {
+  //   const query = `
   //     SELECT COUNT(*) as count
   //     FROM board
-  //     WHERE id = $1 AND (created_by = $2 OR EXISTS(
+  //     WHERE id = $1 AND (
+  //       "createdById" = $2 OR
+  //       EXISTS (
   //         SELECT 1
   //         FROM board_member
-  //         WHERE board_id = $1 AND user_id = $2 AND (role = 'admin' OR role='member')
-  //     ))`;
+  //         WHERE "boardId" = $1 AND "userId" = $2 AND (role = 'admin')
+  //       ) OR
+  //       EXISTS (
+  //         SELECT 1
+  //         FROM workspace
+  //         WHERE id = board."workspaceId" AND (
+  //           "createdById" = $2 OR
+  //           EXISTS (
+  //             SELECT 1
+  //             FROM workspace_members
+  //             WHERE "workspaceId" = board."workspaceId" AND "userId" = $2
+  //           )
+  //         )
+  //       )
+  //     )`;
 
-  //     const conn = this.dataSource.manager.connection;
-  //     const result = await conn.query(query, [boardId, userId]);
-  //     const count = result[0].count;
+  //   const conn = this.dataSource.manager.connection;
+  //   const result = await conn.query(query, [boardId, userId]);
+  //   const count = result[0].count;
 
-  //     return count > 0;
-  //   }
+  //   return count > 0;
+  // }
 }

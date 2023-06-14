@@ -40,7 +40,7 @@ export class BoardController {
     return this.boardService.updateBoard(boardId, updateBoardDto, userId);
   }
 
-  @Delete()
+  @Delete(':id')
   async deleteBoard(
     @Param('id') boardId: number,
     @GetUserId() userId: number,

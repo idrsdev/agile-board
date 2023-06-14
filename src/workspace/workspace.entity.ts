@@ -26,7 +26,9 @@ export class Workspace {
   createdBy: User;
 
   @ManyToMany(() => User, (user) => user.workspaces)
-  @JoinTable()
+  @JoinTable({
+    name: 'workspace_members',
+  })
   members: User[];
 
   @OneToMany(() => Board, (board) => board.workspace)
