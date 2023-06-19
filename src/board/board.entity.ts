@@ -24,7 +24,9 @@ export class Board {
   @ManyToOne(() => User, (user) => user.boards)
   createdBy: User;
 
-  @ManyToOne(() => Workspace, (workspace) => workspace.boards)
+  @ManyToOne(() => Workspace, (workspace) => workspace.boards, {
+    onDelete: 'CASCADE',
+  })
   workspace: Workspace;
 
   @OneToMany(() => BoardMember, (boardMember) => boardMember.board)

@@ -17,16 +17,16 @@ export class Token {
   @Column()
   token: string;
 
-  @Column()
-  userId: number;
-
-  @OneToOne(() => User)
-  @JoinColumn({ name: 'userId' })
-  user: User;
-
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToOne(() => User)
+  @JoinColumn({
+    name: 'userId',
+    referencedColumnName: 'id',
+  })
+  userId: number;
 }
