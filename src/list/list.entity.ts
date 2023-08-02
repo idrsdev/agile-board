@@ -1,4 +1,5 @@
 import { Board } from 'src/board/board.entity';
+import { Card } from 'src/card/card.entity';
 import {
   Column,
   Entity,
@@ -18,7 +19,6 @@ export class List {
   @ManyToOne(() => Board)
   board: Board;
 
-  // TODO: Uncomment once, we have card entity
-  //   @OneToMany(() => Card, (card) => card.list)
-  //   cards: Card[];
+  @OneToMany(() => Card, (card) => card.list)
+  cards: Card[];
 }

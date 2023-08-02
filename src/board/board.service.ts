@@ -121,8 +121,7 @@ export class BoardService {
     const board = await this.boardRepository
       .createQueryBuilder('board')
       .leftJoinAndSelect('board.lists', 'list')
-      // TODO: Add cards once they are added
-      // .leftJoinAndSelect('board.cards', 'card')
+      .leftJoinAndSelect('list.cards', 'card')
       .leftJoinAndSelect('board.members', 'member')
       .leftJoinAndSelect('board.workspace', 'workspace')
       .where('board.id = :boardId', { boardId })

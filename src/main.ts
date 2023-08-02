@@ -37,6 +37,6 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
-  Logger.warn(`Task Service is running on port: ${port}`);
+  Logger.warn(`Agile Board running on port: ${port}`);
 }
 bootstrap();

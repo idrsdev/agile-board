@@ -11,6 +11,7 @@ import { DataSource } from 'typeorm';
 import { createRoles } from './auth/roles/predefined-roles';
 import { BoardModule } from './board/board.module';
 import { ListModule } from './list/list.module';
+import { CardModule } from './card/card.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -23,6 +24,7 @@ import { ListModule } from './list/list.module';
     WorkspaceModule,
     BoardModule,
     ListModule,
+    CardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

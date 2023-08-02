@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { List } from './list.entity';
 import { Repository } from 'typeorm';
@@ -13,7 +13,6 @@ export class ListService {
 
   async createList(createListDto: CreateListDto): Promise<List> {
     const { title, boardId } = createListDto;
-    // TODO: check what happens if board does not exist
     const newList = this.listRepository.create({
       title,
       board: {
@@ -33,7 +32,10 @@ export class ListService {
         id: listId,
       },
     });
-    // TODO: throw an error if it does not exist
+
+    if (!list) {
+      throw new NotFoundException('List not found');
+    }
 
     list.title = title;
 
