@@ -10,6 +10,7 @@ import { WorkspaceModule } from './workspace/workspace.module';
 import { DataSource } from 'typeorm';
 import { createRoles } from './auth/roles/predefined-roles';
 import { BoardModule } from './board/board.module';
+import { ListModule } from './list/list.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -21,6 +22,7 @@ import { BoardModule } from './board/board.module';
     PasswordResetModule,
     WorkspaceModule,
     BoardModule,
+    ListModule,
   ],
   controllers: [AppController],
   providers: [AppService],

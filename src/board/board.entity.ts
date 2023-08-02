@@ -9,6 +9,7 @@ import {
 import { User } from 'src/auth/user.entity';
 import { BoardVisibility } from './board-visibility.enum';
 import { BoardMember } from './board-member.entity';
+import { List } from 'src/list/list.entity';
 
 @Entity()
 export class Board {
@@ -32,7 +33,6 @@ export class Board {
   @OneToMany(() => BoardMember, (boardMember) => boardMember.board)
   members: BoardMember[];
 
-  //   TODO: Update this when we create lists module
-  //   @OneToMany(() => List, (list) => list.board)
-  //   lists: List[];
+  @OneToMany(() => List, (list) => list.board)
+  lists: List[];
 }
