@@ -1,22 +1,22 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsNotEmpty,
-  IsNumber,
-  IsNumberString,
-  IsOptional,
-} from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 
 export class AddOrRemoveMemberDto {
   @ApiProperty()
   @IsOptional()
-  // @IsNotEmpty()
-  // @IsNumber()
-  // @IsNumberString()
+  @IsNotEmpty()
+  @IsNumber()
+  @Transform(({ value }) =>
+    typeof value === 'number' ? value : parseInt(value),
+  )
   workspaceId: number;
 
   @ApiProperty()
   @IsOptional()
-  // @IsNotEmpty()
-  // @IsNumberString()
+  @IsNumber()
+  @Transform(({ value }) =>
+    typeof value === 'number' ? value : parseInt(value),
+  )
   memberId: number;
 }

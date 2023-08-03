@@ -81,10 +81,11 @@ export class WorkspaceService {
     createWorkspaceDto: CreateWorkspaceDto,
     userId: number,
   ) {
-    const { name } = createWorkspaceDto;
+    const { name, description } = createWorkspaceDto;
 
     const workspace = new Workspace();
     workspace.name = name;
+    workspace.description = description;
 
     const userWorkspace = new UserWorkspace();
     userWorkspace.user = await this.userService.getUserById(userId);
@@ -224,6 +225,14 @@ export class WorkspaceService {
     }
   }
 
+  /**
+   * Get the list of members in a workspace.
+   *
+   * @param {number} workspaceId - The ID of the workspace.
+   * @returns {Promise<
+   *   { id: number; role: WorkspaceRole; name: string; email: string }[]
+   * >} The list of workspace members.
+   */
   async getWorkspaceMembers(
     workspaceId: number,
   ): Promise<

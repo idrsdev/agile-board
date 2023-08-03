@@ -20,6 +20,9 @@ export class Workspace {
   @Column()
   name: string;
 
+  @Column()
+  description: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
