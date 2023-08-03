@@ -33,9 +33,9 @@ export class BoardService {
     const isMember = await this.workspaceRepository.exist({
       where: {
         id: workspaceId,
-        createdBy: {
-          id: createdBy,
-        },
+        // createdBy: {
+        //   id: createdBy,
+        // },
       },
     });
 
@@ -139,9 +139,9 @@ export class BoardService {
     const isMemberOfWorkspace = await this.workspaceRepository.exist({
       where: {
         id: workspaceId,
-        createdBy: {
-          id: userId,
-        },
+        // createdBy: {
+        //   id: userId,
+        // },
       },
     });
 

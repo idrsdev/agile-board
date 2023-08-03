@@ -10,6 +10,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { UserWorkspace } from './user-workspace.entity';
 
 @Entity()
 export class Workspace {
@@ -22,15 +23,9 @@ export class Workspace {
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => User, (user) => user.createdWorkspaces)
-  createdBy: User;
+  @OneToMany(() => UserWorkspace, (userWorkspace) => userWorkspace.workspace)
+  userWorkspaces: UserWorkspace[];
 
   @OneToMany(() => Board, (board) => board.workspace)
   boards: Board[];
-
-  @ManyToMany(() => User, (user) => user.workspaces)
-  @JoinTable({
-    name: 'workspace_members',
-  })
-  members: User[];
 }

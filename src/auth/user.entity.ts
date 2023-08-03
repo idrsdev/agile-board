@@ -14,6 +14,7 @@ import { Token } from './token/token.entity';
 import { Workspace } from 'src/workspace/workspace.entity';
 import { Role } from './roles/role.entity';
 import { Board } from 'src/board/board.entity';
+import { UserWorkspace } from 'src/workspace/user-workspace.entity';
 
 @Entity()
 export class User {
@@ -40,15 +41,15 @@ export class User {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToMany(() => Workspace, (workspace) => workspace.createdBy)
-  createdWorkspaces: Workspace[];
-
   @OneToMany(() => Board, (Board) => Board.createdBy)
   boards: Board[];
 
-  @ManyToMany(() => Workspace, (workspace) => workspace.members)
-  workspaces: Workspace[];
+  @OneToMany(() => UserWorkspace, (userWorkspace) => userWorkspace.user)
+  userWorkspaces: UserWorkspace[];
 
+  // @NOTE
+  // This role is to identify if it's a client or system administrator/user etc
+  // The permission for workspaces and boards are handled separately
   @ManyToMany(() => Role, (role) => role.users)
   @JoinTable({
     name: 'user_role',

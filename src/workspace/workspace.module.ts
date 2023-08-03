@@ -5,9 +5,14 @@ import { WorkspaceController } from './workspace.controller';
 import { WorkspaceRepository } from './workspace.repository';
 import { AuthModule } from 'src/auth/auth.module';
 import { Workspace } from './workspace.entity';
+import { UserWorkspace } from './user-workspace.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Workspace]), AuthModule],
+  imports: [
+    TypeOrmModule.forFeature([Workspace, UserWorkspace]),
+    // TypeOrmModule.forFeature([UserWorkspace]),
+    AuthModule,
+  ],
   controllers: [WorkspaceController],
   providers: [WorkspaceService, WorkspaceRepository],
   exports: [WorkspaceRepository],

@@ -6,11 +6,12 @@ import { LoginUserDto } from './dto/loginUser.dto';
 import { TokenRepository } from 'src/auth/token/token.repository';
 import { MailerService } from 'src/common/mailer.service';
 import { User } from './user.entity';
+import { UserRole } from './roles/role.enum';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly userRepository: UserRepository, // private readonly mailerService: MailerService,
+    private readonly userRepository: UserRepository,
     private readonly tokenRepository: TokenRepository,
     private readonly mailerService: MailerService,
   ) {}
@@ -94,5 +95,17 @@ export class AuthService {
   async getUserById(id: number): Promise<User | null> {
     const user = await this.userRepository.getUserById(id);
     return user;
+  }
+
+  async getUserRoles(userId: number): Promise<UserRole[]> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user.roles.map((role) => role.name);
   }
 }

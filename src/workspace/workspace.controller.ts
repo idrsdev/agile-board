@@ -21,6 +21,7 @@ import { PaginationParamsDTO } from 'src/common/pagination-params.dto';
 import { UserRole } from 'src/auth/roles/role.enum';
 import { Roles } from 'src/auth/roles/roles.decorator';
 import { RoleGuard } from 'src/auth/roles/role.guard';
+import { User } from 'src/auth/user.entity';
 
 @ApiTags('Workspaces')
 @UseGuards(JwtAuthGuard)
@@ -38,7 +39,7 @@ export class WorkspaceController {
     isArray: true,
   })
   getAllWorkspace(
-    @GetUserId() userId: string,
+    @GetUserId() userId: number,
     @Query() query: PaginationParamsDTO,
   ): Promise<PaginatedWorkspaces> {
     return this.workspaceService.getAllWorkspaces(
@@ -74,7 +75,7 @@ export class WorkspaceController {
     isArray: true,
   })
   getWorkspaceWhereIAmMember(
-    @GetUserId() userId: string,
+    @GetUserId() userId: number,
     @Query() query: PaginationParamsDTO,
   ): Promise<PaginatedWorkspaces> {
     return this.workspaceService.getWorkspacesWhereMember(
@@ -93,11 +94,12 @@ export class WorkspaceController {
   getWorkspaceById(
     @Param('id') id: number,
     @GetUserId() userId: number,
-  ): Promise<Workspace> {
-    return this.workspaceService.getWorkspaceByUserIdWhereOwnerOrMember(
-      id,
-      userId,
-    );
+  ): Promise<{
+    members: User[];
+    owner: User | undefined;
+    workspace: Workspace;
+  }> {
+    return this.workspaceService.getWorkspaceByIdAndUserId(id, userId);
   }
 
   @Post()
@@ -124,6 +126,16 @@ export class WorkspaceController {
 
   @ApiResponse({
     status: 200,
+    description: 'Get a list of workspace member',
+    type: Workspace,
+  })
+  @Get(':workspaceId/members')
+  async getWorkspaceMembers(@Param('workspaceId') workspaceId: number) {
+    return this.workspaceService.getWorkspaceMembers(workspaceId);
+  }
+
+  @ApiResponse({
+    status: 200,
     description: 'Add a member to workspace if author',
     type: Workspace,
   })
@@ -131,7 +143,7 @@ export class WorkspaceController {
   addMemberToWorkspace(
     @Body() addMemberToWorkspaceDto: AddOrRemoveMemberDto,
     @GetUserId() userId: number,
-  ): Promise<Workspace> {
+  ): Promise<{ memberId: number; message: string }> {
     return this.workspaceService.addMemberToWorkspace(
       addMemberToWorkspaceDto.workspaceId,
       addMemberToWorkspaceDto.memberId,
@@ -148,7 +160,7 @@ export class WorkspaceController {
   removeMemberFromWorkspace(
     @Body() removeMemberToWorkspaceDto: AddOrRemoveMemberDto,
     @GetUserId() userId: number,
-  ): Promise<Workspace> {
+  ): Promise<void> {
     return this.workspaceService.removeMemberFromWorkspace(
       removeMemberToWorkspaceDto.workspaceId,
       removeMemberToWorkspaceDto.memberId,

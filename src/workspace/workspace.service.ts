@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -8,46 +9,74 @@ import { WorkspaceRepository } from './workspace.repository';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { AuthService } from 'src/auth/auth.service';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
-import { DeleteResult, FindManyOptions, FindOneOptions } from 'typeorm';
+import {
+  DeleteResult,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Repository,
+} from 'typeorm';
 import { PaginatedResponse } from 'src/common/paginated-response.interface';
+import { UserWorkspace } from './user-workspace.entity';
+import { User } from 'src/auth/user.entity';
+import { UserRole } from 'src/auth/roles/role.enum';
+import { WorkspaceRole } from './workspace-role.enum';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class WorkspaceService {
   constructor(
     private readonly workspaceRepository: WorkspaceRepository,
+    @InjectRepository(UserWorkspace)
+    private readonly userWorkspaceRepository: Repository<UserWorkspace>,
     private readonly userService: AuthService,
   ) {}
 
+  /**
+   * Get a paginated list of workspaces.
+   *
+   * @param userId - The ID of the user making the request.
+   * @param page - The page number.
+   * @param limit - The number of workspaces per page.
+   * @returns A paginated list of workspaces.
+   */
   async getAllWorkspaces(
-    userId: string,
+    userId: number,
     page = 1,
     limit = 10,
   ): Promise<PaginatedWorkspaces> {
-    // TODO: Implement this in user Service ?
-    // const isAdmin = await this.userService.isAdminUser(userId);
-    // if (!isAdmin) {
-    //   throw new UnauthorizedException(
-    //     'You are not authorized to access this endpoint',
-    //   );
-    // }
-    const options: FindManyOptions<Workspace> = {
-      skip: (page - 1) * limit,
-      take: limit,
-    };
+    const userRoles = await this.userService.getUserRoles(userId);
 
-    const [data, count] = await this.workspaceRepository.findAndCount(options);
+    let workspaces: Workspace[];
 
-    const totalPages = Math.ceil(count / limit);
+    if (userRoles.includes(UserRole.ADMIN)) {
+      workspaces = await this.workspaceRepository.find({
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+    } else {
+      workspaces = await this.findWorkspacesByUserId(userId, page, limit);
+    }
+
+    const totalCount = await this.workspaceRepository.count();
+    const totalPages = Math.ceil(totalCount / limit);
     const hasMore = page < totalPages;
 
     return {
-      data,
+      data: workspaces,
       hasMore,
       totalPages,
       currentPage: page,
     };
   }
 
+  /**
+   * Create a new workspace.
+   *
+   * @param {CreateWorkspaceDto} createWorkspaceDto - The data to create the workspace.
+   * @param {number} userId - The ID of the user making the request.
+   * @returns The created workspace.
+   */
   async createWorkspace(
     createWorkspaceDto: CreateWorkspaceDto,
     userId: number,
@@ -56,182 +85,316 @@ export class WorkspaceService {
 
     const workspace = new Workspace();
     workspace.name = name;
-    workspace.createdBy = await this.userService.getUserById(userId);
-    return this.workspaceRepository.save(workspace);
+
+    const userWorkspace = new UserWorkspace();
+    userWorkspace.user = await this.userService.getUserById(userId);
+    userWorkspace.role = WorkspaceRole.OWNER;
+
+    const createdWorkspace = await this.workspaceRepository.save(workspace);
+
+    userWorkspace.workspace = createdWorkspace;
+    await this.userWorkspaceRepository.save(userWorkspace);
+    return createdWorkspace;
+
+    // workspace.userWorkspaces = [userWorkspace];
+    // return await this.workspaceRepository.save(workspace);
   }
 
-  async getWorkspaceByUserIdWhereOwnerOrMember(
+  /**
+   * Get a workspace by ID along with its members and owner.
+   *
+   * @param id - The ID of the workspace.
+   * @param userId - The ID of the user making the request.
+   * @returns The workspace details.
+   */
+  async getWorkspaceByIdAndUserId(
     id: number,
     userId: number,
-  ): Promise<Workspace> {
+  ): Promise<{
+    members: User[];
+    owner: User | undefined;
+    workspace: Workspace;
+  }> {
     const options: FindOneOptions<Workspace> = {
       where: {
         id: id,
+        userWorkspaces: [
+          // USER must have atleast one of the following
+          { user: { id: userId }, role: WorkspaceRole.MEMBER },
+          { user: { id: userId }, role: WorkspaceRole.ADMIN },
+          { user: { id: userId }, role: WorkspaceRole.OWNER },
+        ],
       },
-      relations: {
-        createdBy: true,
-        members: true,
-        boards: true,
-      },
+      relations: ['userWorkspaces', 'userWorkspaces.user', 'boards'],
     };
     const workspace = await this.workspaceRepository.findOne(options);
 
     if (!workspace) {
-      throw new NotFoundException('Workspace not found');
-    }
-
-    const isAuthor = workspace.createdBy.id === userId;
-    const isMember = workspace.members.some((member) => member.id === userId);
-
-    if (isAuthor || isMember) {
-      return workspace;
-    }
-
-    throw new UnauthorizedException(
-      'You are not authorized to access this workspace',
-    );
-  }
-
-  async updateWorkspace(
-    id: number,
-    updateWorkspaceDto: UpdateWorkspaceDto,
-    userId: number,
-  ): Promise<Workspace> {
-    const workspace = await this.getWorkspaceById(id);
-
-    if (!workspace) {
-      throw new NotFoundException('Workspace not found');
-    }
-
-    if (workspace.createdBy.id !== userId) {
-      throw new UnauthorizedException(
-        'Only the owner can update the workspace',
+      throw new NotFoundException(
+        'Workspace not found or you do not have permission to access it',
       );
     }
 
-    const { name } = updateWorkspaceDto;
-    workspace.name = name;
+    const members = workspace.userWorkspaces
+      .filter((userWorkspace) => userWorkspace.role !== 'owner')
+      .map((userWorkspace) => userWorkspace.user);
 
-    return this.workspaceRepository.save(workspace);
+    const owner = workspace.userWorkspaces.find(
+      (userWorkspace) => userWorkspace.role === 'owner',
+    )?.user;
+
+    return { workspace, members, owner };
   }
 
-  async deleteWorkspace(id: number, userId: number): Promise<void> {
-    const workspace = await this.getWorkspaceById(id);
+  /**
+   * Update a workspace.
+   *
+   * @param workspaceId - The ID of the workspace to update.
+   * @param updateWorkspaceDto - The data to update the workspace.
+   * @param userId - The ID of the user making the request.
+   * @returns The updated workspace.
+   */
+  async updateWorkspace(
+    workspaceId: number,
+    updateWorkspaceDto: UpdateWorkspaceDto,
+    userId: number,
+  ): Promise<Workspace> {
+    const ownerUserWorkspace = await this.userWorkspaceRepository.findOne({
+      where: {
+        workspace: {
+          id: workspaceId,
+        },
+        user: {
+          id: userId,
+        },
+      },
+      relations: {
+        workspace: true,
+      },
+    });
 
-    if (!workspace) {
-      throw new NotFoundException('Workspace not found');
-    }
-
-    if (workspace.createdBy.id !== userId) {
+    if (!ownerUserWorkspace || ownerUserWorkspace.role !== 'owner') {
       throw new UnauthorizedException(
         'Only the owner can delete the workspace',
       );
     }
 
-    const result: DeleteResult = await this.workspaceRepository.delete(id);
+    const { name } = updateWorkspaceDto;
+    ownerUserWorkspace.workspace.name = name;
+
+    await this.workspaceRepository.save(ownerUserWorkspace.workspace);
+
+    return ownerUserWorkspace.workspace;
+  }
+
+  /**
+   * Delete a workspace.
+   *
+   * @param workspaceId - The ID of the workspace to delete.
+   * @param userId - The ID of the user making the request.
+   */
+  async deleteWorkspace(workspaceId: number, userId: number): Promise<void> {
+    const ownerUserWorkspace = await this.userWorkspaceRepository.findOne({
+      where: {
+        workspace: {
+          id: workspaceId,
+        },
+        user: {
+          id: userId,
+        },
+      },
+    });
+
+    if (!ownerUserWorkspace) {
+      throw new BadRequestException('Workspace not found');
+    }
+
+    if (ownerUserWorkspace.role !== 'owner') {
+      throw new UnauthorizedException(
+        'Only the owner can delete the workspace',
+      );
+    }
+
+    const result: DeleteResult = await this.workspaceRepository.delete(
+      workspaceId,
+    );
 
     if (result.affected === 0) {
       throw new NotFoundException('Workspace not found');
     }
   }
 
-  // TODO: Check the USER being added into workspace is not it's author
-  // TODO: Make sure no duplicates
+  async getWorkspaceMembers(
+    workspaceId: number,
+  ): Promise<
+    { id: number; role: WorkspaceRole; name: string; email: string }[]
+  > {
+    const workspace = await this.workspaceRepository.findOne({
+      where: {
+        id: workspaceId,
+      },
+      relations: {
+        userWorkspaces: {
+          user: true,
+        },
+      },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
+    }
+
+    return workspace.userWorkspaces.map((userWorkspace) => ({
+      id: userWorkspace.user.id,
+      role: userWorkspace.role,
+      name: userWorkspace.user.name,
+      email: userWorkspace.user.email,
+    }));
+  }
+
+  /**
+   * Add a member to a workspace.
+   *
+   * @param workspaceId - The ID of the workspace.
+   * @param memberId - The ID of the user to add as a member.
+   * @param userId - The ID of the user making the request.
+   * @param role - The role of the member being added (default: 'member).
+   * @returns The updated workspace.
+   */
   async addMemberToWorkspace(
     workspaceId: number,
     memberId: number,
     userId: number,
-  ): Promise<Workspace> {
-    const workspace = await this.getWorkspaceById(workspaceId);
+    role: WorkspaceRole = WorkspaceRole.MEMBER,
+  ): Promise<{ memberId: number; message: string }> {
+    await this.checkUserIsOwnerOrAdmin(workspaceId, userId);
 
-    if (!workspace) {
-      throw new NotFoundException('Workspace not found');
+    const memberUserWorkspace = await this.userWorkspaceRepository.findOne({
+      where: {
+        workspace: {
+          id: workspaceId,
+        },
+        user: {
+          id: memberId,
+        },
+      },
+    });
+
+    if (!memberUserWorkspace) {
+      await this.createMemberUserWorkspace(workspaceId, memberId, role);
+      return { memberId, message: 'Member Add Succesfully' };
     }
 
-    if (workspace.createdBy.id !== userId) {
-      throw new UnauthorizedException(
-        'Only the owner can add members to the workspace',
-      );
-    }
-
-    const member = await this.userService.getUserById(memberId);
-    if (!member) {
-      throw new NotFoundException('Member not found');
-    }
-    const existingMember = workspace.members.find(
-      (existingMember) => existingMember.id === member.id,
-    );
-
-    if (!existingMember) {
-      workspace.members.push(member);
-      return this.workspaceRepository.save(workspace);
-    }
-    return workspace;
+    return { memberId, message: 'Member Already Added' };
   }
 
+  /**
+   * Remove a member from a workspace.
+   *
+   * @param workspaceId - The ID of the workspace.
+   * @param memberId - The ID of the member to remove.
+   * @param userId - The ID of the user making the request.
+   * @returns The updated workspace.
+   */
   async removeMemberFromWorkspace(
     workspaceId: number,
     memberId: number,
     userId: number,
-  ): Promise<Workspace> {
-    const workspace = await this.getWorkspaceById(workspaceId);
+  ): Promise<void> {
+    await this.checkUserIsOwnerOrAdmin(workspaceId, userId);
 
-    if (!workspace) {
-      throw new NotFoundException('Workspace not found');
+    const memberUserWorkspace = await this.userWorkspaceRepository.findOne({
+      where: {
+        workspace: { id: workspaceId },
+        user: { id: memberId },
+      },
+    });
+
+    if (!memberUserWorkspace) {
+      throw new NotFoundException('Member not found in this workspace');
     }
 
-    if (workspace.createdBy.id !== userId) {
-      throw new UnauthorizedException(
-        'Only the owner can remove members from the workspace',
-      );
+    if (memberUserWorkspace.role === 'owner') {
+      throw new UnauthorizedException('Cannot remove the owner');
     }
 
-    workspace.members = workspace.members.filter(
-      (member) => member.id !== memberId,
-    );
-
-    return this.workspaceRepository.save(workspace);
+    await this.userWorkspaceRepository.remove(memberUserWorkspace);
   }
 
+  /**
+   * Get a paginated list of workspaces created by the user.
+   *
+   * @param userId - The ID of the user.
+   * @param page - The page number.
+   * @param limit - The number of workspaces per page.
+   * @returns A paginated list of workspaces created by the user.
+   */
   async getWorkspacesCreatedByUser(
     userId: number,
     page = 1,
     limit = 10,
   ): Promise<PaginatedWorkspaces> {
-    const skip = (page - 1) * limit;
+    const options: FindManyOptions<UserWorkspace> = {
+      where: {
+        user: { id: userId },
+        role: In(['owner']),
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: {
+        workspace: true,
+      },
+    };
 
-    const [data, count] =
-      await this.workspaceRepository.findWorkspacesCreatedByUser(
-        userId,
-        skip,
-        limit,
-      );
+    const [userWorkspaces, count] =
+      await this.userWorkspaceRepository.findAndCount(options);
 
     const totalPages = Math.ceil(count / limit);
     const hasMore = page < totalPages;
 
     return {
-      data,
+      data: userWorkspaces.map((x) => x.workspace),
       hasMore,
       totalPages,
       currentPage: page,
     };
   }
 
+  /**
+   * Get a paginated list of workspaces where the user is a member or admin.
+   *
+   * @param userId - The ID of the user.
+   * @param page - The page number.
+   * @param limit - The number of workspaces per page.
+   * @returns A paginated list of workspaces where the user is a member or admin.
+   */
   async getWorkspacesWhereMember(
-    userId: string,
+    userId: number,
     page = 1,
     limit = 10,
   ): Promise<PaginatedWorkspaces> {
-    const skip = (page - 1) * limit;
+    const options: FindManyOptions<UserWorkspace> = {
+      where: {
+        user: { id: userId },
+        role: In(['member', 'admin']),
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: ['workspace'],
+    };
 
-    const [data, count] =
-      await this.workspaceRepository.findWorkspacesWhereMember(
-        userId,
-        skip,
-        limit,
-      );
+    const [userWorkspaces, count] =
+      await this.userWorkspaceRepository.findAndCount(options);
 
+    const totalPages = Math.ceil(count / limit);
+    const hasMore = page < totalPages;
+
+    return {
+      data: userWorkspaces.map((x) => x.workspace),
+      hasMore,
+      totalPages,
+      currentPage: page,
+    };
     // const queryBuilder =
     //   this.workspaceRepository.createQueryBuilder('workspace');
     // const [workspaces, count] = await queryBuilder
@@ -240,28 +403,139 @@ export class WorkspaceService {
     //   .skip(skip)
     //   .take(limit)
     //   .getManyAndCount();
-
-    const totalPages = Math.ceil(count / limit);
-    const hasMore = page < totalPages;
-
-    return {
-      data,
-      hasMore,
-      totalPages,
-      currentPage: page,
-    };
   }
 
-  private async getWorkspaceById(id: number): Promise<null | Workspace> {
-    const options: FindOneOptions<Workspace> = {
+  /**
+   * Get a paginated list of workspaces associated with a user.
+   *
+   * @param userId - The ID of the user.
+   * @param page - The page number.
+   * @param limit - The number of workspaces per page.
+   * @returns A paginated list of workspaces associated with the user.
+   */
+  async findWorkspacesByUserId(
+    userId: number,
+    page: number,
+    limit: number,
+  ): Promise<Workspace[]> {
+    const userWorkspaces = await this.userWorkspaceRepository.find({
       where: {
-        id: id,
+        user: { id: userId },
       },
-      relations: ['createdBy', 'members'],
-    };
-    const workspace = await this.workspaceRepository.findOne(options);
+      relations: ['workspace'],
+      skip: (page - 1) * limit,
+      take: limit,
+    });
 
-    return workspace || null;
+    return userWorkspaces.map((userWorkspace) => userWorkspace.workspace);
+  }
+
+  /**
+   * Check if the user is the owner of the workspace.
+   *
+   * @param workspaceId - The ID of the workspace.
+   * @param userId - The ID of the user to check.
+   */
+  private async checkUserIsOwner(
+    workspaceId: number,
+    userId: number,
+  ): Promise<void> {
+    const userWorkspace = await this.userWorkspaceRepository.findOne({
+      where: {
+        workspace: { id: workspaceId },
+        user: { id: userId },
+      },
+    });
+
+    if (!userWorkspace || userWorkspace.role !== 'owner') {
+      throw new UnauthorizedException('Only the owner can perform this action');
+    }
+  }
+
+  /**
+   * Check if the user is the owner or an admin of the workspace.
+   *
+   * @param workspaceId - The ID of the workspace.
+   * @param user - The user to check.
+   * @throws UnauthorizedException - If the user is not authorized.
+   */
+  private async checkUserIsOwnerOrAdmin(
+    workspaceId: number,
+    userId: number,
+  ): Promise<void> {
+    const userWorkspace = await this.userWorkspaceRepository.findOne({
+      where: {
+        workspace: { id: workspaceId },
+        user: { id: userId },
+      },
+    });
+
+    if (
+      !userWorkspace ||
+      ![WorkspaceRole.OWNER, WorkspaceRole.ADMIN].includes(userWorkspace.role)
+    ) {
+      throw new UnauthorizedException(
+        'Only the owner or admin can perform this action',
+      );
+    }
+
+    // if (
+    //   !userWorkspace ||
+    //   (userWorkspace.role !== 'owner' && userWorkspace.role !== 'admin')
+    // ) {
+    //   throw new UnauthorizedException(
+    //     'Only owners and admins can perform this action',
+    //   );
+    // }
+  }
+
+  /* Create a member user workspace and save it.
+   *
+   * @param workspaceId - The ID of the workspace.
+   * @param memberId - The ID of the user to add as a member.
+   */
+  private async createMemberUserWorkspace(
+    workspaceId: number,
+    memberId: number,
+    role: WorkspaceRole,
+  ): Promise<void> {
+    const newMemberUserWorkspace = new UserWorkspace();
+    newMemberUserWorkspace.user = await this.userService.getUserById(memberId);
+    newMemberUserWorkspace.workspace = await this.workspaceRepository.findOne({
+      where: {
+        id: workspaceId,
+      },
+    });
+
+    newMemberUserWorkspace.role = role;
+    await this.userWorkspaceRepository.save(newMemberUserWorkspace);
+  }
+
+  private async getWorkspaceById(
+    id: number,
+    userId: number,
+  ): Promise<null | Workspace> {
+    const options: FindOneOptions<UserWorkspace> = {
+      where: {
+        workspace: { id: id },
+        user: { id: userId },
+      },
+      relations: ['workspace'],
+    };
+
+    const userWorkspace = await this.userWorkspaceRepository.findOne(options);
+
+    if (!userWorkspace) {
+      return null;
+    }
+
+    const role = userWorkspace.role;
+
+    if (role === 'owner' || role === 'admin' || role === 'member') {
+      return userWorkspace.workspace;
+    }
+
+    return null;
   }
 }
 
