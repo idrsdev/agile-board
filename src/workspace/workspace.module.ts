@@ -8,13 +8,9 @@ import { Workspace } from './workspace.entity';
 import { UserWorkspace } from './user-workspace.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Workspace, UserWorkspace]),
-    // TypeOrmModule.forFeature([UserWorkspace]),
-    AuthModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Workspace, UserWorkspace]), AuthModule],
   controllers: [WorkspaceController],
-  providers: [WorkspaceService, WorkspaceRepository],
-  exports: [WorkspaceRepository],
+  providers: [WorkspaceService, WorkspaceRepository, UserWorkspace],
+  exports: [WorkspaceRepository, TypeOrmModule],
 })
 export class WorkspaceModule {}

@@ -96,9 +96,6 @@ export class WorkspaceService {
     userWorkspace.workspace = createdWorkspace;
     await this.userWorkspaceRepository.save(userWorkspace);
     return createdWorkspace;
-
-    // workspace.userWorkspaces = [userWorkspace];
-    // return await this.workspaceRepository.save(workspace);
   }
 
   /**
@@ -120,10 +117,11 @@ export class WorkspaceService {
       where: {
         id: id,
         userWorkspaces: [
-          // USER must have atleast one of the following
-          { user: { id: userId }, role: WorkspaceRole.MEMBER },
-          { user: { id: userId }, role: WorkspaceRole.ADMIN },
-          { user: { id: userId }, role: WorkspaceRole.OWNER },
+          // The user have to be a member irrespective of role
+          { user: { id: userId } },
+          // { user: { id: userId }, role: WorkspaceRole.MEMBER },
+          // { user: { id: userId }, role: WorkspaceRole.ADMIN },
+          // { user: { id: userId }, role: WorkspaceRole.OWNER },
         ],
       },
       relations: ['userWorkspaces', 'userWorkspaces.user', 'boards'],
@@ -138,11 +136,18 @@ export class WorkspaceService {
 
     const members = workspace.userWorkspaces
       .filter((userWorkspace) => userWorkspace.role !== 'owner')
-      .map((userWorkspace) => userWorkspace.user);
+      .map((userWorkspace) => {
+        return { ...userWorkspace.user, role: userWorkspace.role };
+      });
 
-    const owner = workspace.userWorkspaces.find(
+    const userWorkspaces = workspace.userWorkspaces.find(
       (userWorkspace) => userWorkspace.role === 'owner',
-    )?.user;
+    );
+
+    const owner = {
+      ...userWorkspaces?.user,
+      role: userWorkspaces?.role,
+    };
 
     return { workspace, members, owner };
   }
@@ -276,7 +281,11 @@ export class WorkspaceService {
     userId: number,
     role: WorkspaceRole = WorkspaceRole.MEMBER,
   ): Promise<{ memberId: number; message: string }> {
-    await this.checkUserIsOwnerOrAdmin(workspaceId, userId);
+    if (!(await this.checkUserIsOwnerOrAdmin(workspaceId, userId))) {
+      throw new UnauthorizedException(
+        'Only the owner or admin can perform this action',
+      );
+    }
 
     const memberUserWorkspace = await this.userWorkspaceRepository.findOne({
       where: {
@@ -310,7 +319,11 @@ export class WorkspaceService {
     memberId: number,
     userId: number,
   ): Promise<void> {
-    await this.checkUserIsOwnerOrAdmin(workspaceId, userId);
+    if (!(await this.checkUserIsOwnerOrAdmin(workspaceId, userId))) {
+      throw new UnauthorizedException(
+        'Only the owner or admin can perform this action',
+      );
+    }
 
     const memberUserWorkspace = await this.userWorkspaceRepository.findOne({
       where: {
@@ -404,14 +417,6 @@ export class WorkspaceService {
       totalPages,
       currentPage: page,
     };
-    // const queryBuilder =
-    //   this.workspaceRepository.createQueryBuilder('workspace');
-    // const [workspaces, count] = await queryBuilder
-    //   .leftJoin('workspace.members', 'member')
-    //   .where('member.id = :userId', { userId })
-    //   .skip(skip)
-    //   .take(limit)
-    //   .getManyAndCount();
   }
 
   /**
@@ -465,13 +470,13 @@ export class WorkspaceService {
    * Check if the user is the owner or an admin of the workspace.
    *
    * @param workspaceId - The ID of the workspace.
-   * @param user - The user to check.
-   * @throws UnauthorizedException - If the user is not authorized.
+   * @param userId - The user to check.
+   * @returns True if the user is authorized (owner or admin), otherwise False.
    */
-  private async checkUserIsOwnerOrAdmin(
+  public async checkUserIsOwnerOrAdmin(
     workspaceId: number,
     userId: number,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const userWorkspace = await this.userWorkspaceRepository.findOne({
       where: {
         workspace: { id: workspaceId },
@@ -483,19 +488,10 @@ export class WorkspaceService {
       !userWorkspace ||
       ![WorkspaceRole.OWNER, WorkspaceRole.ADMIN].includes(userWorkspace.role)
     ) {
-      throw new UnauthorizedException(
-        'Only the owner or admin can perform this action',
-      );
+      return false;
     }
 
-    // if (
-    //   !userWorkspace ||
-    //   (userWorkspace.role !== 'owner' && userWorkspace.role !== 'admin')
-    // ) {
-    //   throw new UnauthorizedException(
-    //     'Only owners and admins can perform this action',
-    //   );
-    // }
+    return true;
   }
 
   /* Create a member user workspace and save it.
@@ -520,32 +516,60 @@ export class WorkspaceService {
     await this.userWorkspaceRepository.save(newMemberUserWorkspace);
   }
 
-  private async getWorkspaceById(
-    id: number,
+  /**
+   * Check if the user is a member of the specified workspace.
+   *
+   * @param {number} workspaceId - The ID of the workspace.
+   * @param {number} userId - The ID of the user.
+   * @returns {Promise<boolean>} - Returns `true` if the user is a member of the workspace, `false` otherwise.
+   */
+  async checkUserIsMemberOfWorkspace(
+    workspaceId: number,
     userId: number,
-  ): Promise<null | Workspace> {
-    const options: FindOneOptions<UserWorkspace> = {
+  ): Promise<boolean> {
+    const userWorkspace = await this.userWorkspaceRepository.findOne({
       where: {
-        workspace: { id: id },
+        workspace: {
+          id: workspaceId,
+        },
+        user: {
+          id: userId,
+        },
+      },
+    });
+
+    return !!userWorkspace;
+  }
+
+  /**
+   * Get the role of the user in the specified workspace.
+   *
+   * @param {number} workspaceId - The ID of the workspace.
+   * @param {number} userId - The ID of the user.
+   * @returns {Promise<WorkspaceRole | null>} - Returns the role of the user in the workspace, or `null` if the user is not a member.
+   */
+  async getUserWorkspaceRole(
+    workspaceId: number,
+    userId: number,
+  ): Promise<WorkspaceRole | null> {
+    const userWorkspace = await this.userWorkspaceRepository.findOne({
+      where: {
+        workspace: { id: workspaceId },
         user: { id: userId },
       },
-      relations: ['workspace'],
-    };
+    });
 
-    const userWorkspace = await this.userWorkspaceRepository.findOne(options);
-
-    if (!userWorkspace) {
-      return null;
-    }
-
-    const role = userWorkspace.role;
-
-    if (role === 'owner' || role === 'admin' || role === 'member') {
-      return userWorkspace.workspace;
-    }
-
-    return null;
+    return userWorkspace ? userWorkspace.role : null;
   }
 }
 
 export type PaginatedWorkspaces = PaginatedResponse<Workspace>;
+// @EXAMPLE How to use query Builder
+// const queryBuilder =
+//   this.workspaceRepository.createQueryBuilder('workspace');
+// const [workspaces, count] = await queryBuilder
+//   .leftJoin('workspace.members', 'member')
+//   .where('member.id = :userId', { userId })
+//   .skip(skip)
+//   .take(limit)
+//   .getManyAndCount();

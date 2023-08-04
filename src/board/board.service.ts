@@ -1,17 +1,24 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Board } from './board.entity';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, FindOptionsRelations, Repository } from 'typeorm';
 import { CreateBoardDto } from './dto/create-board.dto';
 import { UpdateBoardDto } from './dto/update-board.dto';
 import { BoardVisibility } from './board-visibility.enum';
 import { BoardMember } from './board-member.entity';
 import { UserRepository } from 'src/auth/user.repository';
 import { WorkspaceRepository } from 'src/workspace/workspace.repository';
+import { WorkspaceService } from 'src/workspace/workspace.service';
+import { BoardMemberType } from './board-member-type.enum';
+import { WorkspaceRole } from 'src/workspace/workspace-role.enum';
+import { List } from 'src/list/list.entity';
+import { Workspace } from 'src/workspace/workspace.entity';
 
 @Injectable()
 export class BoardService {
@@ -20,28 +27,33 @@ export class BoardService {
     private readonly boardRepository: Repository<Board>,
     @InjectRepository(BoardMember)
     private readonly boardMemberRepository: Repository<BoardMember>,
+
     private readonly userRepository: UserRepository,
     private readonly workspaceRepository: WorkspaceRepository,
+    private readonly workspaceService: WorkspaceService,
     private dataSource: DataSource,
   ) {}
 
+  /**
+   * Create a new board within a workspace.
+   *
+   * @param createBoardDto - The data to create the board.
+   * @param workspaceId - The ID of the workspace in which to create the board.
+   * @param userId - The ID of the user performing the action.
+   * @throws {UnauthorizedException} if the user doesn't have permission to create a board.
+   * @returns The newly created board.
+   */
   async createBoard(
     createBoardDto: CreateBoardDto,
     workspaceId: number,
-    createdBy: number,
-  ): Promise<Board> {
-    const isMember = await this.workspaceRepository.exist({
-      where: {
-        id: workspaceId,
-        // createdBy: {
-        //   id: createdBy,
-        // },
-      },
-    });
+    userId: number,
+  ): Promise<any> {
+    const isWorkspaceAdminOrOwner =
+      await this.workspaceService.checkUserIsOwnerOrAdmin(workspaceId, userId);
 
-    if (!isMember) {
-      throw new ForbiddenException(
-        "You don't have permission to create a board in this workspace",
+    if (!isWorkspaceAdminOrOwner) {
+      throw new UnauthorizedException(
+        'Only the owner or admin can perform this action',
       );
     }
 
@@ -49,20 +61,40 @@ export class BoardService {
       where: { id: workspaceId },
     });
 
-    const user = await this.userRepository.findOne({
-      where: { id: createdBy },
-    });
-
     const { title, visibility } = createBoardDto;
     const board = new Board();
     board.title = title;
     board.visibility = visibility;
     board.workspace = workspace;
-    board.createdBy = user;
 
-    return this.boardRepository.save(board);
+    const createdBoard = await this.boardRepository.save(board);
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (user) {
+      const boardMember = new BoardMember();
+      boardMember.board = board;
+      boardMember.user = user;
+      boardMember.role = BoardMemberType.OWNER;
+      boardMember.isAdmin = true;
+
+      await this.boardMemberRepository.save(boardMember);
+    }
+
+    return createdBoard;
   }
 
+  /**
+   * Update a board's details.
+   *
+   * @param boardId - The ID of the board to update.
+   * @param updateBoardDto - The data to update the board.
+   * @param userId - The ID of the user performing the action.
+   * @throws {ForbiddenException} if the user doesn't have permission to update the board.
+   * @returns The updated board.
+   */
   async updateBoard(
     boardId: number,
     updateBoardDto: UpdateBoardDto,
@@ -70,59 +102,83 @@ export class BoardService {
   ): Promise<Board> {
     const { title, visibility } = updateBoardDto;
 
-    const board = await this.boardRepository.findOne({
-      where: {
-        id: boardId,
-      },
+    const board = await this.getBoardByIdWithRelations(boardId, {
+      workspace: true,
     });
 
-    if (!board) {
-      throw new NotFoundException('Board not found');
-    }
-
-    if (!(await this.hasBoardPermission(boardId, userId))) {
-      throw new ForbiddenException(
-        "You don't have permission to update this board",
+    const hasWorkspaceEditAccess =
+      await this.workspaceService.checkUserIsOwnerOrAdmin(
+        board.workspace.id,
+        userId,
       );
+
+    if (
+      hasWorkspaceEditAccess ||
+      (await this.checkUserIsOwnerOrAdmin(boardId, userId))
+    ) {
+      if (title) {
+        board.title = title;
+      }
+
+      if (visibility) {
+        board.visibility = visibility;
+      }
+
+      return this.boardRepository.save(board);
     }
 
-    if (title) {
-      board.title = title;
-    }
-
-    if (visibility) {
-      board.visibility = visibility;
-    }
-
-    return this.boardRepository.save(board);
+    throw new ForbiddenException(
+      "You don't have permission to update this board",
+    );
   }
 
+  /**
+   * Delete a board.
+   *
+   * @param boardId - The ID of the board to delete.
+   * @param userId - The ID of the user performing the action.
+   * @throws {ForbiddenException} if the user doesn't have permission to delete the board.
+   */
   async deleteBoard(boardId: number, userId: number): Promise<void> {
-    const board = await this.boardRepository.findOne({
-      where: {
-        id: boardId,
-      },
+    const board = await this.getBoardByIdWithRelations(boardId, {
+      workspace: true,
     });
 
-    if (!board) {
-      throw new NotFoundException('Board not found');
-    }
-
-    if (!(await this.hasBoardPermission(boardId, userId))) {
-      throw new ForbiddenException(
-        "You don't have permission to delete this board",
+    const isWorkspaceAdminOrOwner =
+      await this.workspaceService.checkUserIsOwnerOrAdmin(
+        board.workspace.id,
+        userId,
       );
+
+    const isBoardAdmin = await this.checkUserIsBoardAdmin(boardId, userId);
+
+    if (isWorkspaceAdminOrOwner || isBoardAdmin) {
+      await this.boardRepository.delete(boardId);
+      return;
     }
 
-    await this.boardRepository.delete(boardId);
+    throw new ForbiddenException(
+      "You don't have permission to delete this board",
+    );
   }
 
-  async getBoardById(boardId: number, userId: number) {
+  /**
+   * Get a board by its ID along with specified relations.
+   *
+   * @param boardId - The ID of the board to retrieve.
+   * @param userId - The ID of the user requesting the board.
+   * @returns The retrieved board along with user roles.
+   * @throws {NotFoundException} if the board with the specified ID is not found.
+   * @throws {ForbiddenException} if the user doesn't have permission to access the board.
+   */
+  async getBoardById(boardId: number, userId: number): Promise<FlattenedBoard> {
+    // @NOTE Close Board/Leave Board option depending on ownership
     const board = await this.boardRepository
       .createQueryBuilder('board')
       .leftJoinAndSelect('board.lists', 'list')
       .leftJoinAndSelect('list.cards', 'card')
       .leftJoinAndSelect('board.members', 'member')
+      .leftJoinAndSelect('member.user', 'user')
       .leftJoinAndSelect('board.workspace', 'workspace')
       .where('board.id = :boardId', { boardId })
       .getOne();
@@ -130,70 +186,169 @@ export class BoardService {
     if (!board) {
       throw new NotFoundException('Board not found');
     }
+
+    const flattedMembers = board.members.map((member) => ({
+      id: member.id,
+      userId: member.user.id,
+      name: member.user.name,
+      email: member.user.email,
+      role: member.role,
+      isAdmin: member.isAdmin,
+    }));
+
     const workspaceId = board.workspace.id;
 
     if (board.visibility === BoardVisibility.PUBLIC) {
-      return board;
+      return {
+        ...board,
+        members: [],
+        boardRole: null,
+        workspaceRole: null,
+      };
     }
 
-    const isMemberOfWorkspace = await this.workspaceRepository.exist({
-      where: {
-        id: workspaceId,
-        // createdBy: {
-        //   id: userId,
-        // },
-      },
-    });
+    const isMemberOfWorkspace =
+      await this.workspaceService.checkUserIsMemberOfWorkspace(
+        workspaceId,
+        userId,
+      );
 
-    const isMemberOfBoard = board.members.some(
-      (member) => member.id === userId,
+    const isMemberOfBoard = flattedMembers.find(
+      (member) => member.userId === userId,
     );
+
+    let boardRole: BoardMemberType | null = null;
+    let workspaceRole: WorkspaceRole | null = null;
+
+    if (isMemberOfBoard) {
+      boardRole = isMemberOfBoard.role;
+    }
+
+    if (isMemberOfWorkspace) {
+      workspaceRole = await this.workspaceService.getUserWorkspaceRole(
+        workspaceId,
+        userId,
+      );
+    }
 
     if (
-      board.visibility === BoardVisibility.WORKSPACE &&
-      !isMemberOfWorkspace
-    ) {
-      throw new ForbiddenException(
-        "You don't have permission to access this board",
-      );
-    } else if (
-      board.visibility === BoardVisibility.PRIVATE &&
-      !isMemberOfBoard
+      (board.visibility === BoardVisibility.WORKSPACE &&
+        !isMemberOfWorkspace) ||
+      (board.visibility === BoardVisibility.PRIVATE && !isMemberOfBoard)
     ) {
       throw new ForbiddenException(
         "You don't have permission to access this board",
       );
     }
 
-    return board;
+    return { ...board, members: flattedMembers, boardRole, workspaceRole };
   }
 
-  async addMemberToBoard(boardId: number, userId: number): Promise<void> {
-    const board = await this.boardRepository.findOne({
-      where: {
-        id: boardId,
+  /**
+   * Get the list of members for a specific board.
+   *
+   * @param {number} boardId - The ID of the board.
+   * @param {number} userId - The ID of the user making request.
+   * @returns {Promise<{ members: BoardMember[] }>} The list of board members.
+   * @throws {NotFoundException} If the board with the specified ID is not found.
+   * @throws {ForbiddenException} If the user doesn't have permission to access the board.
+   */
+  async getBoardMembers(
+    boardId: number,
+    userId: number,
+  ): Promise<FlattenedMember[]> {
+    const board = await this.getBoardByIdWithRelations(boardId, {
+      members: {
+        user: true,
       },
-      relations: {
-        workspace: true,
-        createdBy: true,
-      },
+      workspace: true,
     });
 
-    if (!board) {
-      throw new NotFoundException('Board not found');
+    const flattedMembers = board.members.map((member) => ({
+      id: member.id,
+      userId: member.user.id,
+      name: member.user.name,
+      email: member.user.email,
+      role: member.role,
+      isAdmin: member.isAdmin,
+    }));
+
+    const isMemberOfWorkspace =
+      await this.workspaceService.checkUserIsMemberOfWorkspace(
+        board.workspace.id,
+        userId,
+      );
+
+    const isMemberOfBoard = flattedMembers.find(
+      (member) => member.userId === userId,
+    );
+    if (!isMemberOfBoard && !isMemberOfWorkspace) {
+      throw new ForbiddenException(
+        "You don't have permission to view member list",
+      );
     }
 
-    // Check if the user is a workspace admin or board admin
-    const isWorkspaceAdmin = await this.isWorkspaceAdmin(
-      board.workspace.id,
+    const boardMembers: FlattenedMember[] = board.members.map((member) => ({
+      id: member.id,
+      userId: member.user.id,
+      name: member.user.name,
+      email: member.user.email,
+      role: member.role,
+      isAdmin: member.isAdmin,
+    }));
+
+    return boardMembers;
+  }
+
+  /**
+   * Add a member to a board.
+   *
+   * @param boardId - The ID of the board to add the member to.
+   * @param userId - The ID of the user to add as a member.
+   * @param role - The role of the member being added (default: 'member).
+   * @throws {ForbiddenException} if the user doesn't have permission to add a member.
+   */
+
+  async addMemberToBoard(
+    boardId: number,
+    userId: number,
+    role: BoardMemberType = BoardMemberType.MEMBER,
+  ): Promise<BoardMember> {
+    const board = await this.getBoardByIdWithRelations(boardId, {
+      workspace: true,
+    });
+
+    const isWorkspaceAdminOrOwner =
+      await this.workspaceService.checkUserIsOwnerOrAdmin(
+        board.workspace.id,
+        userId,
+      );
+
+    const isBoardAdminOrOwner = await this.checkUserIsOwnerOrAdmin(
+      board.id,
       userId,
     );
-    const isBoardAdmin = await this.isBoardAdmin(board.createdBy.id, userId);
 
-    if (!isWorkspaceAdmin && !isBoardAdmin) {
+    if (!isWorkspaceAdminOrOwner && !isBoardAdminOrOwner) {
       throw new ForbiddenException(
         "You don't have permission to add a member to this board",
       );
+    }
+
+    // I think now we don't need to explicitly check for user existence
+    const existingMember = await this.boardMemberRepository.findOne({
+      where: {
+        board: {
+          id: board.id,
+        },
+        user: {
+          id: userId,
+        },
+      },
+    });
+
+    if (existingMember) {
+      throw new ConflictException('User is already a member of this board');
     }
 
     const user = await this.userRepository.findOne({
@@ -209,32 +364,36 @@ export class BoardService {
     const boardMember = new BoardMember();
     boardMember.board = board;
     boardMember.user = user;
+    if (role) boardMember.role = role;
 
-    await this.boardMemberRepository.save(boardMember);
+    return await this.boardMemberRepository.save(boardMember);
   }
 
+  /**
+   * Remove a member from a board.
+   *
+   * @param boardId - The ID of the board to remove the member from.
+   * @param userId - The ID of the user to remove from the board.
+   * @throws {ForbiddenException} if the user doesn't have permission to remove a member.
+   * @throws {NotFoundException} if the board member is not found.
+   */
   async removeMemberFromBoard(boardId: number, userId: number): Promise<void> {
-    const board = await this.boardRepository.findOne({
-      where: {
-        id: boardId,
-      },
-      relations: {
-        workspace: true,
-        createdBy: true,
-      },
+    const board = await this.getBoardByIdWithRelations(boardId, {
+      workspace: true,
     });
 
-    if (!board) {
-      throw new NotFoundException('Board not found');
-    }
+    const isWorkspaceAdminOrOwner =
+      await this.workspaceService.checkUserIsOwnerOrAdmin(
+        board.workspace.id,
+        userId,
+      );
 
-    const isWorkspaceAdmin = await this.isWorkspaceAdmin(
-      board.workspace.id,
+    const isBoardAdminOrOwner = await this.checkUserIsOwnerOrAdmin(
+      board.id,
       userId,
     );
-    const isBoardAdmin = await this.isBoardAdmin(board.createdBy.id, userId);
 
-    if (!isWorkspaceAdmin && !isBoardAdmin) {
+    if (!isWorkspaceAdminOrOwner && !isBoardAdminOrOwner) {
       throw new ForbiddenException(
         "You don't have permission to remove a member from this board",
       );
@@ -250,74 +409,65 @@ export class BoardService {
     }
   }
 
-  private async isWorkspaceAdmin(
-    workspaceId: number,
-    userId: number,
-  ): Promise<boolean> {
-    const workspace = await this.workspaceRepository
-      .createQueryBuilder('workspace')
-      .leftJoin('workspace.createdBy', 'user')
-      .where('workspace.id = :workspaceId', { workspaceId })
-      .andWhere('user.id = :userId', { userId })
-      .getCount();
+  /**
+   * Get a board by its ID along with specified relations.
+   *
+   * @param boardId - The ID of the board to retrieve.
+   * @param relations - Optional relations to load along with the board.
+   * @throws {NotFoundException} if the board with the specified ID is not found.
+   * @returns The retrieved board with specified relations.
+   */
+  async getBoardByIdWithRelations(
+    boardId: number,
+    relations?: FindOptionsRelations<Board>,
+  ): Promise<Board> {
+    const options = {
+      where: { id: boardId },
+      relations: {
+        ...relations,
+      },
+    };
 
-    return workspace > 0;
+    const board = await this.boardRepository.findOne(options);
+
+    if (!board) {
+      throw new NotFoundException('Board not found');
+    }
+
+    return board;
   }
 
-  private async isBoardAdmin(
-    boardCreatorId: number,
+  /**
+   * Check if a user is the owner or an admin of a board.
+   *
+   * @param boardId - The ID of the board to check.
+   * @param userId - The ID of the user to check.
+   * @returns `true` if the user is the owner or an admin, otherwise `false`.
+   */
+  async checkUserIsOwnerOrAdmin(
+    boardId: number,
     userId: number,
   ): Promise<boolean> {
-    const board = await this.boardRepository
-      .createQueryBuilder('board')
-      .leftJoin('board.createdBy', 'user')
-      .where('board.createdBy = :boardCreatorId', { boardCreatorId })
-      .andWhere('user.id = :userId', { userId })
-      .getCount();
-
-    return board > 0;
-  }
-
-  async hasBoardPermission(boardId: number, userId: number): Promise<boolean> {
     try {
       const connection = this.dataSource.manager.connection;
-      // Check if the board is created by the current user or the user is a member of the board with the role 'admin'
-      const createdByCurrentUserOrAdmin = await connection
+
+      const isOwnerOrAdmin = await connection
         .createQueryBuilder()
-        .from('board', 'board')
-        .leftJoin('board.createdBy', 'createdBy')
-        .leftJoin('board.members', 'boardMember')
+        .select('board.id')
+        .from(Board, 'board')
+        .leftJoinAndSelect('board.members', 'boardMember')
         .where(
-          '(board.id = :boardId AND createdBy.id = :userId) OR (boardMember.boardId = :boardId AND boardMember.userId = :userId AND boardMember.role = :role)',
+          '(board.id = :boardId AND boardMember.userId = :userId AND (boardMember.role = :roleOwner OR boardMember.role = :roleAdmin))',
           {
             boardId,
             userId,
-            role: 'admin',
+            roleOwner: BoardMemberType.OWNER,
+            roleAdmin: BoardMemberType.ADMIN,
           },
         )
         .getCount();
 
-      if (createdByCurrentUserOrAdmin > 0) {
-        return true;
-      }
-
-      // Check if the workspace of the board is created by the current user or the user is a member of the workspace
-      const workspaceCreatedByCurrentUserOrMember = await connection
-        .createQueryBuilder()
-        .from('board', 'board')
-        .leftJoin('board.workspace', 'workspace')
-        .leftJoin('workspace.members', 'members')
-        .leftJoin('workspace.createdBy', 'workspaceCreatedBy')
-        .where(
-          '(board.id = :boardId AND workspaceCreatedBy.id = :userId) OR (members.id = :userId)',
-          {
-            boardId,
-            userId,
-          },
-        )
-        .getExists();
-
-      if (workspaceCreatedByCurrentUserOrMember) {
+      if (isOwnerOrAdmin > 0) {
         return true;
       }
 
@@ -328,56 +478,54 @@ export class BoardService {
     }
   }
 
-  // private async hasBoardPermission(
-  //   boardId: number,
-  //   userId: number,
-  // ): Promise<boolean> {
-  //   const hasPermission = await this.boardRepository
-  //     .createQueryBuilder('board')
-  //     .leftJoin('board.createdBy', 'createdBy')
-  //     .leftJoin('board.members', 'boardMembers')
-  //     .leftJoin('board.workspace', 'workspace')
-  //     .leftJoin('workspace.members', 'workspace_members')
-  //     .leftJoin('workspace.createdBy', 'workspaceCreatedBy')
-  //     .where('board.id = :boardId', { boardId })
-  //     .andWhere(
-  //       '(createdBy.id = :userId OR (boardMembers.user = :userId AND boardMembers.role = :role) OR :userId = ANY(ARRAY[workspace_members.id]) OR :userId = workspaceCreatedBy.id)',
-  //       { userId, role: 'admin' },
-  //     )
-  //     .getCount();
+  /**
+   * Check if a user is an admin of a board.
+   *
+   * @param boardId - The ID of the board to check.
+   * @param userId - The ID of the user to check.
+   * @returns `true` if the user is an admin, otherwise `false`.
+   */
+  private async checkUserIsBoardAdmin(
+    boardId: number,
+    userId: number,
+  ): Promise<boolean> {
+    const connection = this.dataSource.manager.connection;
 
-  //   return hasPermission > 0;
-  // }
+    const isAdmin = await connection
+      .createQueryBuilder()
+      .select('board.id')
+      .from(Board, 'board')
+      .leftJoinAndSelect('board.members', 'boardMember')
+      .where(
+        '(board.id = :boardId AND boardMember.userId = :userId AND boardMember.role = :roleOwner)',
+        {
+          boardId,
+          userId,
+          roleOwner: BoardMemberType.OWNER,
+        },
+      )
+      .getCount();
 
-  // async hasBoardPermission(boardId: number, userId: number): Promise<boolean> {
-  //   const query = `
-  //     SELECT COUNT(*) as count
-  //     FROM board
-  //     WHERE id = $1 AND (
-  //       "createdById" = $2 OR
-  //       EXISTS (
-  //         SELECT 1
-  //         FROM board_member
-  //         WHERE "boardId" = $1 AND "userId" = $2 AND (role = 'admin')
-  //       ) OR
-  //       EXISTS (
-  //         SELECT 1
-  //         FROM workspace
-  //         WHERE id = board."workspaceId" AND (
-  //           "createdById" = $2 OR
-  //           EXISTS (
-  //             SELECT 1
-  //             FROM workspace_members
-  //             WHERE "workspaceId" = board."workspaceId" AND "userId" = $2
-  //           )
-  //         )
-  //       )
-  //     )`;
+    return isAdmin > 0;
+  }
+}
 
-  //   const conn = this.dataSource.manager.connection;
-  //   const result = await conn.query(query, [boardId, userId]);
-  //   const count = result[0].count;
+export interface FlattenedBoard {
+  id: number;
+  title: string;
+  visibility: BoardVisibility;
+  lists: List[];
+  members: FlattenedMember[];
+  workspace: Workspace;
+  boardRole: BoardMemberType | null;
+  workspaceRole: WorkspaceRole | null;
+}
 
-  //   return count > 0;
-  // }
+interface FlattenedMember {
+  id: number;
+  userId: number;
+  name: string;
+  email: string;
+  role: BoardMemberType;
+  isAdmin: boolean;
 }

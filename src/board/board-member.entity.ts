@@ -16,8 +16,8 @@ export class BoardMember {
   @ManyToOne(() => User)
   user: User;
 
-  @Column({ enum: BoardMemberType, default: BoardMemberType.ADMIN })
-  role: string;
+  @Column({ enum: BoardMemberType, default: BoardMemberType.MEMBER })
+  role: BoardMemberType;
 
   @Column({ default: false })
   isAdmin: boolean;
