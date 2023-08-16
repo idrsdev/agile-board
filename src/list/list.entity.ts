@@ -16,9 +16,12 @@ export class List {
   @Column()
   title: string;
 
-  @ManyToOne(() => Board)
-  board: Board;
+  @Column({ default: 0 })
+  position: number;
 
   @OneToMany(() => Card, (card) => card.list)
   cards: Card[];
+
+  @ManyToOne(() => Board, (board) => board.lists)
+  board: Board;
 }

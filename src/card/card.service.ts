@@ -5,6 +5,10 @@ import { Repository } from 'typeorm';
 import { CreateCardDto, UpdateCardDto } from './card.dto';
 import { List } from 'src/list/list.entity';
 
+// TODO: Add Permissions Check through out just like board module
+// TODO: Add JsDocs comments
+// TODO: Add mising functionality for example card positioning etc
+
 @Injectable()
 export class CardService {
   constructor(
@@ -14,7 +18,6 @@ export class CardService {
     private readonly listRepository: Repository<List>,
   ) {}
 
-  // TODO: Add Permissions Check
   async createCard(createCardDto: CreateCardDto) {
     const { title, description, listId } = createCardDto;
 

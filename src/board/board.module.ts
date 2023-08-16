@@ -7,6 +7,7 @@ import { WorkspaceModule } from 'src/workspace/workspace.module';
 import { BoardMember } from './board-member.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { WorkspaceService } from 'src/workspace/workspace.service';
+import { BoardAclService } from './board-acl/board-acl.service';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { WorkspaceService } from 'src/workspace/workspace.service';
     AuthModule,
   ],
   controllers: [BoardController],
-  providers: [BoardService, WorkspaceService],
+  providers: [BoardService, WorkspaceService, BoardAclService],
+  exports: [TypeOrmModule],
 })
 export class BoardModule {}

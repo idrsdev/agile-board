@@ -1,20 +1,25 @@
 import { Body, Controller, Delete, Param, Patch, Post } from '@nestjs/common';
 import { ListService } from './list.service';
 import { CreateListDto, UpdateListDto } from './list.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { GetUserId } from 'src/common/decorators/get-user-id.decorator';
 
 @ApiTags('List')
 @Controller('lists')
 export class ListController {
-  // TODO: Check for permissions here before allowing these actions
   constructor(private readonly listService: ListService) {}
 
+  @ApiOperation({ summary: 'Create a new list' })
   @Post()
-  async createList(@Body() createListDto: CreateListDto) {
-    const newList = await this.listService.createList(createListDto);
+  async createList(
+    @Body() createListDto: CreateListDto,
+    @GetUserId() userId: number,
+  ) {
+    const newList = await this.listService.createList(createListDto, userId);
     return { message: 'List created successfully', data: newList };
   }
 
+  @ApiOperation({ summary: 'Update an existing list' })
   @Patch(':id')
   async updateList(
     @Param('id') listId: number,
@@ -27,9 +32,24 @@ export class ListController {
     return { message: 'List updated successfully', data: updatedList };
   }
 
+  @ApiOperation({ summary: 'Delete a list' })
   @Delete(':id')
-  async deleteList(@Param('id') listId: number) {
-    await this.listService.deleteList(listId);
+  async deleteList(
+    @Param('boardId') boardId: number,
+    @Param('id') listId: number,
+    @GetUserId() userId: number,
+  ) {
+    await this.listService.deleteList(boardId, userId, listId);
     return { message: 'List Deleted Successfully' };
+  }
+
+  @ApiOperation({ summary: 'Update list positions' })
+  @Patch('update-positions')
+  async updateListPositions(
+    @Param('boardId') boardId: number,
+    @Body() positions: { id: number; position: number }[],
+  ) {
+    await this.listService.updateListPositions(boardId, positions);
+    return { message: 'List positions updated successfully' };
   }
 }

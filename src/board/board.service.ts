@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Board } from './board.entity';
-import { DataSource, FindOptionsRelations, Repository } from 'typeorm';
+import { FindOptionsRelations, Repository } from 'typeorm';
 import { CreateBoardDto } from './dto/create-board.dto';
 import { UpdateBoardDto } from './dto/update-board.dto';
 import { BoardVisibility } from './board-visibility.enum';
@@ -19,6 +19,7 @@ import { BoardMemberType } from './board-member-type.enum';
 import { WorkspaceRole } from 'src/workspace/workspace-role.enum';
 import { List } from 'src/list/list.entity';
 import { Workspace } from 'src/workspace/workspace.entity';
+import { BoardAclService } from './board-acl/board-acl.service';
 
 @Injectable()
 export class BoardService {
@@ -31,7 +32,7 @@ export class BoardService {
     private readonly userRepository: UserRepository,
     private readonly workspaceRepository: WorkspaceRepository,
     private readonly workspaceService: WorkspaceService,
-    private dataSource: DataSource,
+    private readonly boardAclService: BoardAclService,
   ) {}
 
   /**
@@ -102,6 +103,8 @@ export class BoardService {
   ): Promise<Board> {
     const { title, visibility } = updateBoardDto;
 
+    // checkUserHasBoardPermissions;
+
     const board = await this.getBoardByIdWithRelations(boardId, {
       workspace: true,
     });
@@ -114,7 +117,7 @@ export class BoardService {
 
     if (
       hasWorkspaceEditAccess ||
-      (await this.checkUserIsOwnerOrAdmin(boardId, userId))
+      (await this.boardAclService.checkUserIsOwnerOrAdmin(boardId, userId))
     ) {
       if (title) {
         board.title = title;
@@ -150,7 +153,10 @@ export class BoardService {
         userId,
       );
 
-    const isBoardAdmin = await this.checkUserIsBoardAdmin(boardId, userId);
+    const isBoardAdmin = await this.boardAclService.checkUserIsBoardAdmin(
+      boardId,
+      userId,
+    );
 
     if (isWorkspaceAdminOrOwner || isBoardAdmin) {
       await this.boardRepository.delete(boardId);
@@ -249,7 +255,7 @@ export class BoardService {
    *
    * @param {number} boardId - The ID of the board.
    * @param {number} userId - The ID of the user making request.
-   * @returns {Promise<{ members: BoardMember[] }>} The list of board members.
+   * @returns {Promise<{ members: FlattenedMember[] }>} The list of board members.
    * @throws {NotFoundException} If the board with the specified ID is not found.
    * @throws {ForbiddenException} If the user doesn't have permission to access the board.
    */
@@ -324,10 +330,8 @@ export class BoardService {
         userId,
       );
 
-    const isBoardAdminOrOwner = await this.checkUserIsOwnerOrAdmin(
-      board.id,
-      userId,
-    );
+    const isBoardAdminOrOwner =
+      await this.boardAclService.checkUserIsOwnerOrAdmin(board.id, userId);
 
     if (!isWorkspaceAdminOrOwner && !isBoardAdminOrOwner) {
       throw new ForbiddenException(
@@ -388,10 +392,8 @@ export class BoardService {
         userId,
       );
 
-    const isBoardAdminOrOwner = await this.checkUserIsOwnerOrAdmin(
-      board.id,
-      userId,
-    );
+    const isBoardAdminOrOwner =
+      await this.boardAclService.checkUserIsOwnerOrAdmin(board.id, userId);
 
     if (!isWorkspaceAdminOrOwner && !isBoardAdminOrOwner) {
       throw new ForbiddenException(
@@ -436,78 +438,6 @@ export class BoardService {
 
     return board;
   }
-
-  /**
-   * Check if a user is the owner or an admin of a board.
-   *
-   * @param boardId - The ID of the board to check.
-   * @param userId - The ID of the user to check.
-   * @returns `true` if the user is the owner or an admin, otherwise `false`.
-   */
-  async checkUserIsOwnerOrAdmin(
-    boardId: number,
-    userId: number,
-  ): Promise<boolean> {
-    try {
-      const connection = this.dataSource.manager.connection;
-
-      const isOwnerOrAdmin = await connection
-        .createQueryBuilder()
-        .select('board.id')
-        .from(Board, 'board')
-        .leftJoinAndSelect('board.members', 'boardMember')
-        .where(
-          '(board.id = :boardId AND boardMember.userId = :userId AND (boardMember.role = :roleOwner OR boardMember.role = :roleAdmin))',
-          {
-            boardId,
-            userId,
-            roleOwner: BoardMemberType.OWNER,
-            roleAdmin: BoardMemberType.ADMIN,
-          },
-        )
-        .getCount();
-
-      if (isOwnerOrAdmin > 0) {
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
-
-  /**
-   * Check if a user is an admin of a board.
-   *
-   * @param boardId - The ID of the board to check.
-   * @param userId - The ID of the user to check.
-   * @returns `true` if the user is an admin, otherwise `false`.
-   */
-  private async checkUserIsBoardAdmin(
-    boardId: number,
-    userId: number,
-  ): Promise<boolean> {
-    const connection = this.dataSource.manager.connection;
-
-    const isAdmin = await connection
-      .createQueryBuilder()
-      .select('board.id')
-      .from(Board, 'board')
-      .leftJoinAndSelect('board.members', 'boardMember')
-      .where(
-        '(board.id = :boardId AND boardMember.userId = :userId AND boardMember.role = :roleOwner)',
-        {
-          boardId,
-          userId,
-          roleOwner: BoardMemberType.OWNER,
-        },
-      )
-      .getCount();
-
-    return isAdmin > 0;
-  }
 }
 
 export interface FlattenedBoard {
@@ -521,7 +451,7 @@ export interface FlattenedBoard {
   workspaceRole: WorkspaceRole | null;
 }
 
-interface FlattenedMember {
+export interface FlattenedMember {
   id: number;
   userId: number;
   name: string;

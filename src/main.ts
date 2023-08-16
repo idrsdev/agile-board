@@ -27,8 +27,10 @@ async function bootstrap() {
 
   // Swagger API Documentation
   const config = new DocumentBuilder()
-    .setTitle('Task API')
-    .setDescription('API documentation for Task management')
+    .setTitle('Agile Board API')
+    .setDescription(
+      'Agile Board: Streamline project management, boost productivity, and collaborate effectively. Organize tasks, track progress, and prioritize work seamlessly. Try it now!',
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();

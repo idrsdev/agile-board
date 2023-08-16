@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateListDto {
   @ApiProperty()
@@ -11,6 +11,11 @@ export class CreateListDto {
   @IsNotEmpty()
   @IsNumber()
   boardId: number;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsNumber()
+  position: number;
 }
 
 export class UpdateListDto {
