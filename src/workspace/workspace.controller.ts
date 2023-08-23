@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Workspace } from './workspace.entity';
-import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { PaginatedWorkspaces, WorkspaceService } from './workspace.service';
@@ -49,6 +49,7 @@ export class WorkspaceController {
     );
   }
 
+  @ApiOperation({ summary: 'Returns all workspaces Created By Current User' })
   @Get('me')
   @ApiResponse({
     status: 200,
@@ -67,6 +68,9 @@ export class WorkspaceController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Returns all workspaces where Current User is a member',
+  })
   @Get('member')
   @ApiResponse({
     status: 200,
@@ -85,6 +89,9 @@ export class WorkspaceController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Returns a single workspace if author or member',
+  })
   @Get(':id')
   @ApiResponse({
     status: 200,
@@ -102,6 +109,9 @@ export class WorkspaceController {
     return this.workspaceService.getWorkspaceByIdAndUserId(id, userId);
   }
 
+  @ApiOperation({
+    summary: 'Creates a new workspace',
+  })
   @Post()
   @ApiResponse({
     status: 201,
@@ -115,6 +125,9 @@ export class WorkspaceController {
     return this.workspaceService.createWorkspace(createWorkspaceDto, userId);
   }
 
+  @ApiOperation({
+    summary: 'Deletes a workspace if Current User is author of workspace',
+  })
   @Delete(':id')
   @ApiResponse({ status: 204, description: 'Deletes a workspace if author' })
   deleteWorkspace(
@@ -124,6 +137,9 @@ export class WorkspaceController {
     return this.workspaceService.deleteWorkspace(id, userId);
   }
 
+  @ApiOperation({
+    summary: 'Get a list of workspace member',
+  })
   @ApiResponse({
     status: 200,
     description: 'Get a list of workspace member',
@@ -134,6 +150,9 @@ export class WorkspaceController {
     return this.workspaceService.getWorkspaceMembers(workspaceId);
   }
 
+  @ApiOperation({
+    summary: 'Add a member to workspace if Current User is author',
+  })
   @ApiResponse({
     status: 200,
     description: 'Add a member to workspace if author',
@@ -151,6 +170,9 @@ export class WorkspaceController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Remove a member from workspace if removed by author',
+  })
   @Patch('remove-member')
   @ApiResponse({
     status: 200,
@@ -168,6 +190,9 @@ export class WorkspaceController {
     );
   }
   // @NOTE: This URL will be at the end
+  @ApiOperation({
+    summary: 'update name of the workspace',
+  })
   @Patch(':id')
   @ApiResponse({
     status: 200,

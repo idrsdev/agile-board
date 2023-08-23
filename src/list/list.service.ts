@@ -28,7 +28,7 @@ export class ListService {
     createListDto: CreateListDto,
     userId: number,
   ): Promise<List> {
-    const { title, boardId } = createListDto;
+    const { title, boardId, position } = createListDto;
 
     const board = await this.boardService.getBoardByIdWithRelations(boardId, {
       workspace: true,
@@ -47,6 +47,7 @@ export class ListService {
         board: {
           id: boardId,
         },
+        ...(position && { position }),
       });
 
       return this.listRepository.save(newList);

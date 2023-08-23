@@ -9,6 +9,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TokenModule } from 'src/auth/token/token.module';
 import { MailerService } from 'src/common/mailer.service';
 import { RoleModule } from './roles/role.module';
+import { RoleRepository } from './roles/role.repository';
 
 @Module({
   imports: [
@@ -20,12 +21,20 @@ import { RoleModule } from './roles/role.module';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get('JWT_SECRET'),
         signOptions: { expiresIn: configService.get('JWT_EXPIRY') },
+        global: true,
       }),
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, UserRepository, MailerService],
+  providers: [AuthService, UserRepository, MailerService, RoleRepository],
   controllers: [AuthController],
-  exports: [TokenModule, UserRepository, AuthService],
+  exports: [
+    TokenModule,
+    UserRepository,
+    AuthService,
+    RoleRepository,
+    TypeOrmModule,
+    JwtModule,
+  ],
 })
 export class AuthModule {}

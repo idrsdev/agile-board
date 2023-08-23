@@ -1,10 +1,20 @@
-import { Body, Controller, Delete, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ListService } from './list.service';
 import { CreateListDto, UpdateListDto } from './list.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { GetUserId } from 'src/common/decorators/get-user-id.decorator';
+import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 
 @ApiTags('List')
+@UseGuards(JwtAuthGuard)
 @Controller('lists')
 export class ListController {
   constructor(private readonly listService: ListService) {}

@@ -183,6 +183,7 @@ export class BoardService {
       .createQueryBuilder('board')
       .leftJoinAndSelect('board.lists', 'list')
       .leftJoinAndSelect('list.cards', 'card')
+      .leftJoinAndSelect('card.comments', 'comments') //@TODO: A separate endpoint to get card comments
       .leftJoinAndSelect('board.members', 'member')
       .leftJoinAndSelect('member.user', 'user')
       .leftJoinAndSelect('board.workspace', 'workspace')

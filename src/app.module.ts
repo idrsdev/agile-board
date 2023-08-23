@@ -12,6 +12,7 @@ import { createRoles } from './auth/roles/predefined-roles';
 import { BoardModule } from './board/board.module';
 import { ListModule } from './list/list.module';
 import { CardModule } from './card/card.module';
+import { CommentModule } from './comment/comment.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -25,6 +26,7 @@ import { CardModule } from './card/card.module';
     BoardModule,
     ListModule,
     CardModule,
+    CommentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

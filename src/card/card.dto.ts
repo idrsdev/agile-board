@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Comment } from 'src/comment/comment.entity';
 
 export class CreateCardDto {
   @ApiProperty()
@@ -19,15 +20,29 @@ export class CreateCardDto {
 }
 
 export class UpdateCardDto {
-  @ApiProperty()
+  @ApiProperty({ required: false })
   @IsNotEmpty()
   @IsOptional()
   @IsString()
   title?: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
   @IsNotEmpty()
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({ required: false })
+  @IsNotEmpty()
+  @IsOptional()
+  @IsString()
+  coverColor?: string;
+}
+
+export class CardDetailsDto {
+  id: number;
+  title: string;
+  description: string;
+  // attachments: Attachment[];
+  comments: Comment[];
 }
