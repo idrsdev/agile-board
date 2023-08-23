@@ -8,7 +8,12 @@ import {
   Post,
 } from '@nestjs/common';
 import { CardService } from './card.service';
-import { CreateCardDto, UpdateCardDto } from './card.dto';
+import {
+  CreateCardDto,
+  MoveCardDto,
+  ReorderCardsDto,
+  UpdateCardDto,
+} from './card.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Cards')
@@ -21,19 +26,6 @@ export class CardController {
   async createCard(@Body() createCardDto: CreateCardDto) {
     const newCard = await this.cardService.createCard(createCardDto);
     return { message: 'Card created successfully', data: newCard };
-  }
-
-  @ApiOperation({ summary: 'Update a card' })
-  @Patch(':id')
-  async updateCard(
-    @Param('id') cardId: number,
-    @Body() updateCardDto: UpdateCardDto,
-  ) {
-    const updatedCard = await this.cardService.updateCard(
-      updateCardDto,
-      cardId,
-    );
-    return { message: 'Card updated successfully', data: updatedCard };
   }
 
   @ApiOperation({ summary: 'Delete a card' })
@@ -68,5 +60,32 @@ export class CardController {
   ) {
     await this.cardService.removeCardAssignment(cardId, userId);
     return { message: 'Card unassigned from user successfully' };
+  }
+
+  @ApiOperation({ summary: 'Re-Orders Cards in a list' })
+  @Patch('reorder')
+  async reorderCards(@Body() reorderCardsDto: ReorderCardsDto) {
+    await this.cardService.reorderCards(reorderCardsDto);
+    return { message: 'Cards reordered successfully' };
+  }
+
+  @ApiOperation({ summary: 'Move Card from one list to another' })
+  @Patch('move')
+  async moveCard(@Body() moveCardDto: MoveCardDto) {
+    await this.cardService.moveCard(moveCardDto);
+    return { message: 'Card moved successfully' };
+  }
+
+  @ApiOperation({ summary: 'Update a card' })
+  @Patch(':id')
+  async updateCard(
+    @Param('id') cardId: number,
+    @Body() updateCardDto: UpdateCardDto,
+  ) {
+    const updatedCard = await this.cardService.updateCard(
+      updateCardDto,
+      cardId,
+    );
+    return { message: 'Card updated successfully', data: updatedCard };
   }
 }

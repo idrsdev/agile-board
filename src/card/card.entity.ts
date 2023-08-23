@@ -20,6 +20,9 @@ export class Card {
   @Column()
   description: string;
 
+  @Column({ default: 1 })
+  position: number;
+
   @Column({ nullable: true })
   coverColor: string;
 

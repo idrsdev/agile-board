@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Comment } from 'src/comment/comment.entity';
 
 export class CreateCardDto {
@@ -45,4 +51,24 @@ export class CardDetailsDto {
   description: string;
   // attachments: Attachment[];
   comments: Comment[];
+}
+
+export class ReorderCardsDto {
+  @ApiProperty()
+  @IsNumber()
+  listId: number;
+
+  @ApiProperty()
+  @IsArray()
+  cardIds: number[];
+}
+
+export class MoveCardDto {
+  @ApiProperty()
+  @IsNumber()
+  cardId: number;
+
+  @ApiProperty()
+  @IsNumber()
+  newListId: number;
 }

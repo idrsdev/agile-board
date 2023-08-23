@@ -1,8 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Card } from './card.entity';
-import { Repository } from 'typeorm';
-import { CardDetailsDto, CreateCardDto, UpdateCardDto } from './card.dto';
+import { In, Repository } from 'typeorm';
+import {
+  CardDetailsDto,
+  CreateCardDto,
+  MoveCardDto,
+  ReorderCardsDto,
+  UpdateCardDto,
+} from './card.dto';
 import { List } from 'src/list/list.entity';
 import { CardAssignment } from './card-assignment.entity';
 import { User } from 'src/auth/user.entity';
@@ -134,5 +140,62 @@ export class CardService {
 
   async deleteCard(cardId: number): Promise<void> {
     await this.cardRepository.delete(cardId);
+  }
+
+  async reorderCards(reorderCardsDto: ReorderCardsDto): Promise<void> {
+    const { listId, cardIds } = reorderCardsDto;
+
+    const cards = await this.cardRepository.find({
+      where: {
+        id: In(cardIds),
+        list: {
+          id: listId,
+        },
+      },
+    });
+
+    if (cards.length !== cardIds.length) {
+      throw new NotFoundException('One or more cards not found');
+    }
+
+    const positionsMap = cardIds.reduce((map, id, index) => {
+      map[id] = index + 1;
+      return map;
+    });
+
+    await Promise.all(
+      cards.map((card) => {
+        card.position = positionsMap[card.id];
+        return this.cardRepository.save(card);
+      }),
+    );
+  }
+
+  async moveCard(moveCardDto: MoveCardDto): Promise<void> {
+    const { cardId, newListId } = moveCardDto;
+
+    const card = await this.cardRepository.findOne({
+      where: {
+        id: cardId,
+      },
+    });
+
+    if (!card) {
+      throw new NotFoundException('Card not found');
+    }
+
+    const newList = await this.listRepository.findOne({
+      where: {
+        id: newListId,
+      },
+    });
+
+    if (!newList) {
+      throw new NotFoundException('Target list not found');
+    }
+
+    card.list = newList;
+
+    this.cardRepository.save(card);
   }
 }
