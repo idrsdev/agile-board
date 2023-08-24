@@ -18,7 +18,4 @@ export class BoardMember {
 
   @Column({ enum: BoardMemberType, default: BoardMemberType.MEMBER })
   role: BoardMemberType;
-
-  @Column({ default: false })
-  isAdmin: boolean;
 }

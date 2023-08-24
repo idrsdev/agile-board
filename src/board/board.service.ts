@@ -79,7 +79,6 @@ export class BoardService {
       boardMember.board = board;
       boardMember.user = user;
       boardMember.role = BoardMemberType.OWNER;
-      boardMember.isAdmin = true;
 
       await this.boardMemberRepository.save(boardMember);
     }
@@ -200,11 +199,12 @@ export class BoardService {
       name: member.user.name,
       email: member.user.email,
       role: member.role,
-      isAdmin: member.isAdmin,
     }));
 
     const workspaceId = board.workspace.id;
 
+    // TODO: Handle the case
+    // TODO: Board is Public! But User is it's member! Populate members and roles
     if (board.visibility === BoardVisibility.PUBLIC) {
       return {
         ...board,
@@ -277,7 +277,6 @@ export class BoardService {
       name: member.user.name,
       email: member.user.email,
       role: member.role,
-      isAdmin: member.isAdmin,
     }));
 
     const isMemberOfWorkspace =
@@ -301,7 +300,6 @@ export class BoardService {
       name: member.user.name,
       email: member.user.email,
       role: member.role,
-      isAdmin: member.isAdmin,
     }));
 
     return boardMembers;
@@ -458,5 +456,4 @@ export interface FlattenedMember {
   name: string;
   email: string;
   role: BoardMemberType;
-  isAdmin: boolean;
 }
