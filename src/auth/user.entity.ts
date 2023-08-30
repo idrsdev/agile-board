@@ -2,16 +2,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  JoinColumn,
   JoinTable,
   ManyToMany,
   OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Token } from './token/token.entity';
-import { Workspace } from 'src/workspace/workspace.entity';
 import { Role } from './roles/role.entity';
 import { Board } from 'src/board/board.entity';
 import { UserWorkspace } from 'src/workspace/user-workspace.entity';
