@@ -6,7 +6,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { Comment } from 'src/comment/comment.entity';
+import { Comment } from '../comment/comment.entity';
 
 export class CreateCardDto {
   @ApiProperty()

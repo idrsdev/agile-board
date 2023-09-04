@@ -9,8 +9,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Role } from './roles/role.entity';
-import { Board } from 'src/board/board.entity';
-import { UserWorkspace } from 'src/workspace/user-workspace.entity';
+import { Board } from '../board/board.entity';
+import { UserWorkspace } from '../workspace/user-workspace.entity';
 
 @Entity()
 export class User {

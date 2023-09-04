@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from './dto/createUser.dto';
 import { LoginUserDto } from './dto/loginUser.dto';
@@ -17,8 +26,9 @@ export class AuthController {
   async registerUser(
     @Body() createUserDto: CreateUserDto,
     @Req() req: Request,
-  ): Promise<void> {
-    await this.authService.create(createUserDto, req);
+  ): Promise<{ message: string; id: string }> {
+    const res = await this.authService.create(createUserDto, req);
+    return { message: 'User successfully registered', id: res.id };
   }
 
   @ApiOperation({ summary: 'Authenticate user' })
@@ -26,6 +36,7 @@ export class AuthController {
     status: 200,
     description: 'User successfully authenticated',
   })
+  @HttpCode(200)
   @Post('login')
   async loginUser(
     @Body() loginUserDto: LoginUserDto,
@@ -47,15 +58,16 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Resend activation link' })
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiResponse({
-    status: 202,
+    status: HttpStatus.ACCEPTED,
     description: 'Activation link queued for sending',
   })
   @Post('resend-activation-link')
   async resendActivationEmail(
     @Body() body: ResendActivationEmailDto,
     @Req() req: Request,
-  ): Promise<void> {
-    await this.authService.resendActivationLink(body.email, req);
+  ): Promise<{ message: string }> {
+    return await this.authService.resendActivationLink(body.email, req);
   }
 }

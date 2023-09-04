@@ -12,13 +12,13 @@ import { CreateBoardDto } from './dto/create-board.dto';
 import { UpdateBoardDto } from './dto/update-board.dto';
 import { BoardVisibility } from './board-visibility.enum';
 import { BoardMember } from './board-member.entity';
-import { UserRepository } from 'src/auth/user.repository';
-import { WorkspaceRepository } from 'src/workspace/workspace.repository';
-import { WorkspaceService } from 'src/workspace/workspace.service';
+import { UserRepository } from '../auth/user.repository';
+import { WorkspaceRepository } from '../workspace/workspace.repository';
+import { WorkspaceService } from '../workspace/workspace.service';
 import { BoardMemberType } from './board-member-type.enum';
-import { WorkspaceRole } from 'src/workspace/workspace-role.enum';
-import { List } from 'src/list/list.entity';
-import { Workspace } from 'src/workspace/workspace.entity';
+import { WorkspaceRole } from '../workspace/workspace-role.enum';
+import { List } from '../list/list.entity';
+import { Workspace } from '../workspace/workspace.entity';
 import { BoardAclService } from './board-acl/board-acl.service';
 
 @Injectable()

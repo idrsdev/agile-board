@@ -1,4 +1,4 @@
-import { Role } from 'src/auth/roles/role.entity';
+import { Role } from './role.entity';
 import { DataSource } from 'typeorm';
 import { UserRole } from './role.enum';
 

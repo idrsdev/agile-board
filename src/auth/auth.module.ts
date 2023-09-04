@@ -6,8 +6,8 @@ import { User } from './user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TokenModule } from 'src/auth/token/token.module';
-import { MailerService } from 'src/common/mailer.service';
+import { TokenModule } from '../auth/token/token.module';
+import { MailerService } from '../common/mailer.service';
 import { RoleModule } from './roles/role.module';
 import { RoleRepository } from './roles/role.repository';
 

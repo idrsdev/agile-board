@@ -10,8 +10,8 @@ import {
 import { CommentService } from './comment.service';
 import { CreateCommentDto, UpdateCommentDto } from './comment.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { GetUserId } from 'src/common/decorators/get-user-id.decorator';
-import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
+import { GetUserId } from '../common/decorators/get-user-id.decorator';
+import { JwtAuthGuard } from '../auth/guards/auth.guard';
 
 @ApiTags('Comments')
 @UseGuards(JwtAuthGuard)

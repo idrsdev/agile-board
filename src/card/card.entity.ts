@@ -1,4 +1,4 @@
-import { List } from 'src/list/list.entity';
+import { List } from '../list/list.entity';
 import {
   Column,
   Entity,
@@ -7,7 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { CardAssignment } from './card-assignment.entity';
-import { Comment } from 'src/comment/comment.entity';
+import { Comment } from '../comment/comment.entity';
 
 @Entity()
 export class Card {

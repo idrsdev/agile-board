@@ -3,8 +3,8 @@ import { UserRepository } from './user.repository';
 import { CreateUserDto } from './dto/createUser.dto';
 import { Request } from 'express';
 import { LoginUserDto } from './dto/loginUser.dto';
-import { TokenRepository } from 'src/auth/token/token.repository';
-import { MailerService } from 'src/common/mailer.service';
+import { TokenRepository } from '../auth/token/token.repository';
+import { MailerService } from '../common/mailer.service';
 import { User } from './user.entity';
 import { UserRole } from './roles/role.enum';
 
@@ -22,7 +22,10 @@ export class AuthService {
    * @param {Request} req - The HTTP request object.
    * @returns {Promise<void>}
    */
-  async create(createUserDto: CreateUserDto, req: Request): Promise<void> {
+  async create(
+    createUserDto: CreateUserDto,
+    req: Request,
+  ): Promise<{ id: string }> {
     const user = await this.userRepository.createUser(createUserDto);
 
     const activationToken = await this.tokenRepository.generateActivationToken(
@@ -37,6 +40,7 @@ export class AuthService {
     );
 
     await this.sendActivationEmail(user.email, activationLink);
+    return { id: user.id.toString() };
   }
 
   /**
@@ -80,8 +84,10 @@ export class AuthService {
    * @returns {Promise<void>}
    * @throws {NotFoundException} If the user is not found or the account is already activated.
    */
-  async resendActivationLink(email: string, req: Request): Promise<void> {
-    // Check if the user exists
+  async resendActivationLink(
+    email: string,
+    req: Request,
+  ): Promise<{ message: string }> {
     const user = await this.userRepository.getUserByEmail(email);
 
     if (!user || user.isActive) {
@@ -95,7 +101,6 @@ export class AuthService {
       user.id,
     );
 
-    // Construct the activation email
     const activationLink = this.constructActivationLink(
       req.protocol,
       req.get('host'),
@@ -104,6 +109,7 @@ export class AuthService {
     );
 
     await this.sendActivationEmail(user.email, activationLink);
+    return { message: 'Activation link queued for sending' };
   }
 
   /**

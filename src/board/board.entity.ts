@@ -1,4 +1,4 @@
-import { Workspace } from 'src/workspace/workspace.entity';
+import { Workspace } from '../workspace/workspace.entity';
 import {
   Column,
   Entity,
@@ -6,10 +6,10 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { User } from 'src/auth/user.entity';
+import { User } from '../auth/user.entity';
 import { BoardVisibility } from './board-visibility.enum';
 import { BoardMember } from './board-member.entity';
-import { List } from 'src/list/list.entity';
+import { List } from '../list/list.entity';
 
 @Entity()
 export class Board {

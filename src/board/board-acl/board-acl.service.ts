@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Board } from '../board.entity';
 import { BoardMemberType } from '../board-member-type.enum';
-import { WorkspaceService } from 'src/workspace/workspace.service';
+import { WorkspaceService } from '../../workspace/workspace.service';
 
 @Injectable()
 export class BoardAclService {

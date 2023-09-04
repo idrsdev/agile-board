@@ -6,8 +6,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Card } from 'src/card/card.entity';
-import { User } from 'src/auth/user.entity';
+import { Card } from '../card/card.entity';
+import { User } from '../auth/user.entity';
 
 @Entity()
 export class Comment {

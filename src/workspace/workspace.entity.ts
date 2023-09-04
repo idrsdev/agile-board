@@ -1,5 +1,5 @@
-import { User } from 'src/auth/user.entity';
-import { Board } from 'src/board/board.entity';
+import { User } from '../auth/user.entity';
+import { Board } from '../board/board.entity';
 import {
   Column,
   CreateDateColumn,

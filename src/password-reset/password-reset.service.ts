@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from '../auth/user.repository';
-import { TokenRepository } from 'src/auth/token/token.repository';
-import { MailerService } from 'src/common/mailer.service';
+import { TokenRepository } from '../auth/token/token.repository';
+import { MailerService } from '../common/mailer.service';
 import { Request } from 'express';
 
 @Injectable()

@@ -7,8 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { List } from './list.entity';
 import { Repository } from 'typeorm';
 import { CreateListDto, UpdateListDto } from './list.dto';
-import { BoardAclService } from 'src/board/board-acl/board-acl.service';
-import { BoardService } from 'src/board/board.service';
+import { BoardAclService } from '../board/board-acl/board-acl.service';
+import { BoardService } from '../board/board.service';
 
 @Injectable()
 export class ListService {

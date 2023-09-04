@@ -7,7 +7,7 @@ import {
 import { Workspace } from './workspace.entity';
 import { WorkspaceRepository } from './workspace.repository';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
-import { AuthService } from 'src/auth/auth.service';
+import { AuthService } from '../auth/auth.service';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import {
   DeleteResult,
@@ -16,10 +16,10 @@ import {
   In,
   Repository,
 } from 'typeorm';
-import { PaginatedResponse } from 'src/common/paginated-response.interface';
+import { PaginatedResponse } from '../common/paginated-response.interface';
 import { UserWorkspace } from './user-workspace.entity';
-import { User } from 'src/auth/user.entity';
-import { UserRole } from 'src/auth/roles/role.enum';
+import { User } from '../auth/user.entity';
+import { UserRole } from '../auth/roles/role.enum';
 import { WorkspaceRole } from './workspace-role.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 

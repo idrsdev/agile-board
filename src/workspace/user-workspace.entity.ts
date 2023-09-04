@@ -1,5 +1,5 @@
 import { Entity, ManyToOne, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { User } from 'src/auth/user.entity';
+import { User } from '../auth/user.entity';
 import { Workspace } from './workspace.entity';
 import { WorkspaceRole } from './workspace-role.enum';
 

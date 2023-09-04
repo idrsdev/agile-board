@@ -11,11 +11,11 @@ import {
 } from '@nestjs/common';
 import { BoardService, FlattenedBoard, FlattenedMember } from './board.service';
 import { CreateBoardDto } from './dto/create-board.dto';
-import { GetUserId } from 'src/common/decorators/get-user-id.decorator';
+import { GetUserId } from '../common/decorators/get-user-id.decorator';
 import { Board } from './board.entity';
 import { UpdateBoardDto } from './dto/update-board.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
+import { JwtAuthGuard } from '../auth/guards/auth.guard';
 import { BoardMember } from './board-member.entity';
 import { BoardMemberDto } from './dto/board-member.dto';
 

@@ -10,7 +10,7 @@ import { CreateUserDto } from './dto/createUser.dto';
 import { LoginUserDto } from './dto/loginUser.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { TokenRepository } from 'src/auth/token/token.repository';
+import { TokenRepository } from '../auth/token/token.repository';
 import { RoleRepository } from './roles/role.repository';
 import { UserRole } from './roles/role.enum';
 
@@ -37,7 +37,7 @@ export class UserRepository extends Repository<User> {
     });
 
     if (existingUser) {
-      throw new BadRequestException('Email already exists');
+      throw new BadRequestException('User with this email already exists');
     }
 
     const defaultRole = await this.roleRepository.findOne({

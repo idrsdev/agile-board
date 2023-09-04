@@ -14,14 +14,14 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { PaginatedWorkspaces, WorkspaceService } from './workspace.service';
-import { GetUserId } from 'src/common/decorators/get-user-id.decorator';
-import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
+import { GetUserId } from '../common/decorators/get-user-id.decorator';
+import { JwtAuthGuard } from '../auth/guards/auth.guard';
 import { AddOrRemoveMemberDto } from './dto/add-or-remove-member.dto';
-import { PaginationParamsDTO } from 'src/common/pagination-params.dto';
-import { UserRole } from 'src/auth/roles/role.enum';
-import { Roles } from 'src/auth/roles/roles.decorator';
-import { RoleGuard } from 'src/auth/roles/role.guard';
-import { User } from 'src/auth/user.entity';
+import { PaginationParamsDTO } from '../common/pagination-params.dto';
+import { UserRole } from '../auth/roles/role.enum';
+import { Roles } from '../auth/roles/roles.decorator';
+import { RoleGuard } from '../auth/roles/role.guard';
+import { User } from '../auth/user.entity';
 
 @ApiTags('Workspaces')
 @UseGuards(JwtAuthGuard)

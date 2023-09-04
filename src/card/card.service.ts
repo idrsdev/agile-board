@@ -9,9 +9,9 @@ import {
   ReorderCardsDto,
   UpdateCardDto,
 } from './card.dto';
-import { List } from 'src/list/list.entity';
+import { List } from '../list/list.entity';
 import { CardAssignment } from './card-assignment.entity';
-import { User } from 'src/auth/user.entity';
+import { User } from '../auth/user.entity';
 
 // TODO: Add Permissions Check through out just like board module
 // TODO: Add JsDocs comments

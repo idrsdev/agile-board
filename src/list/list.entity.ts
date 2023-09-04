@@ -1,5 +1,5 @@
-import { Board } from 'src/board/board.entity';
-import { Card } from 'src/card/card.entity';
+import { Board } from '../board/board.entity';
+import { Card } from '../card/card.entity';
 import {
   Column,
   Entity,

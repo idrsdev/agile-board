@@ -3,10 +3,10 @@ import { CardController } from './card.controller';
 import { CardService } from './card.service';
 import { Card } from './card.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ListModule } from 'src/list/list.module';
+import { ListModule } from '../list/list.module';
 import { CardAssignment } from './card-assignment.entity';
-import { AuthModule } from 'src/auth/auth.module';
-import { UserRepository } from 'src/auth/user.repository';
+import { AuthModule } from '../auth/auth.module';
+import { UserRepository } from '../auth/user.repository';
 
 @Module({
   imports: [

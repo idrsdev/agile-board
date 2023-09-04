@@ -3,7 +3,7 @@ import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UserRepository } from './user.repository';
-import { MailerService } from 'src/common/mailer.service';
+import { MailerService } from '../common/mailer.service';
 import { CreateUserDto } from './dto/createUser.dto';
 import { LoginUserDto } from './dto/loginUser.dto';
 import { TokenRepository } from './token/token.repository';
