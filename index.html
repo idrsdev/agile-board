@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Swagger Documentation</title>
+    <!-- Load Swagger UI CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.5.0/swagger-ui.min.css">
+</head>
+<body>
+    <div id="swagger-ui"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.5.0/swagger-ui-bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.5.0/swagger-ui-standalone-preset.min.js"></script>
+
+    <script>
+        const ui = SwaggerUIBundle({
+            url: './swagger.json', 
+            dom_id: '#swagger-ui',
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIStandalonePreset
+            ],
+            layout: 'BaseLayout'
+        });
+    </script>
+</body>
+</html>
