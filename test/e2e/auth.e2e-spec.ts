@@ -1,35 +1,21 @@
 import { HttpStatus, INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
-import { createConnection } from 'typeorm';
-import { TypeOrmConfigService } from '../src/config/TypeOrmConfigService';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { User } from '../src/auth/user.entity';
-import { createUserAndToken } from './fixtures/user.fixture';
-import { TokenRepository } from '../src/auth/token/token.repository';
-import { UserRepository } from '../src/auth/user.repository';
-import { ResendActivationEmailDto } from '../src/auth/dto/resendActivationEmail.dto';
+import { AppModule } from '../../src/app.module';
+import { User } from '../../src/auth/user.entity';
+import { createUserAndToken } from '../fixtures/user.fixture';
+import { TokenRepository } from '../../src/auth/token/token.repository';
+import { UserRepository } from '../../src/auth/user.repository';
+import { ResendActivationEmailDto } from '../../src/auth/dto/resendActivationEmail.dto';
+import { ensureGlobalConfigService } from '../config.service';
 
 let app: INestApplication;
-let globalConfigService: ConfigService;
 let userRepository: UserRepository;
 let tokenRepository: TokenRepository;
 
 describe('Auth (E2E)', () => {
   beforeAll(async () => {
-    const configModule = ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env.test',
-    });
-
-    const moduleRef = await Test.createTestingModule({
-      imports: [configModule],
-    }).compile();
-
-    globalConfigService = moduleRef.get<ConfigService>(ConfigService);
-
-    await createTestDatabase();
+    const { configModule } = await ensureGlobalConfigService();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule.forRoot(configModule)],
@@ -44,7 +30,6 @@ describe('Auth (E2E)', () => {
 
   afterAll(async () => {
     await app.close();
-    await dropTestDatabase();
   });
 
   describe('Registration', () => {
@@ -156,40 +141,3 @@ describe('Auth (E2E)', () => {
     });
   });
 });
-
-async function createTestDatabase() {
-  const configService = new TypeOrmConfigService(globalConfigService);
-
-  const rootConnection = await createConnection({
-    ...configService.createTypeOrmOptions(),
-    database: 'postgres',
-  });
-
-  await rootConnection.query(
-    `DROP DATABASE IF EXISTS "${
-      configService.createTypeOrmOptions().database
-    }";`,
-  );
-  await rootConnection.query(
-    `CREATE DATABASE "${configService.createTypeOrmOptions().database}";`,
-  );
-  await rootConnection.close();
-}
-
-async function dropTestDatabase() {
-  const configService = new TypeOrmConfigService(
-    new ConfigService({ envFilePath: '.env.e2e' }),
-  );
-
-  const rootConnection = await createConnection({
-    ...configService.createTypeOrmOptions(),
-    database: 'postgres',
-  });
-
-  await rootConnection.query(
-    `DROP DATABASE IF EXISTS "${
-      configService.createTypeOrmOptions().database
-    }";`,
-  );
-  await rootConnection.close();
-}
