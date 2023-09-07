@@ -1,7 +1,7 @@
 import { ensureGlobalConfigService } from '../config.service';
-import { dropTestDatabase } from './setup-utils';
+import testDatabaseMananger from './test-database-manager';
 
 module.exports = async () => {
   const { globalConfigService } = await ensureGlobalConfigService();
-  await dropTestDatabase(globalConfigService);
+  await testDatabaseMananger.dropTestDatabase(globalConfigService);
 };
