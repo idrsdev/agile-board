@@ -45,6 +45,11 @@ describe('AuthController', () => {
       };
       const req: Request = {} as Request;
 
+      authService.create = jest.fn().mockResolvedValue({
+        message: 'User successfully registered',
+        id: 1,
+      });
+
       await controller.registerUser(createUserDto, req);
 
       expect(authService.create).toHaveBeenCalledWith(createUserDto, req);

@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { TypeOrmConfigService } from '../../src/config/TypeOrmConfigService';
+import { TypeOrmConfigService } from '../../src/database/config/TypeOrmConfigService';
 import { DataSource } from 'typeorm';
 
 class TestDatabaseManager {
@@ -11,7 +11,7 @@ class TestDatabaseManager {
   ): Promise<{ rootConnection: DataSource; testDbName: string }> {
     if (!this.rootConnection || !this.testDbName) {
       const configService = new TypeOrmConfigService(globalConfigService);
-      this.testDbName = configService.createTypeOrmOptions().database;
+      this.testDbName = configService.createTypeOrmOptions().database as string;
 
       this.rootConnection = new DataSource({
         ...configService.createTypeOrmOptions(),

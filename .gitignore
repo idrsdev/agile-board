@@ -1,8 +1,9 @@
 # compiled output
 /dist
 /node_modules
-.env
-.env.test
+
+*.env
+!example.env
 
 # Logs
 logs

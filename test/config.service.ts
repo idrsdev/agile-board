@@ -1,7 +1,6 @@
 import { DynamicModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-
 let globalConfigService: ConfigService | undefined;
 let configModule: DynamicModule | undefined;
 
@@ -12,7 +11,7 @@ const ensureGlobalConfigService = async () => {
 
   configModule = ConfigModule.forRoot({
     isGlobal: true,
-    envFilePath: '.env.test',
+    envFilePath: 'test.env',
   });
 
   const moduleRef = await Test.createTestingModule({
